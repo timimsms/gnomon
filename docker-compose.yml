@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gnomon
+      POSTGRES_PASSWORD: gnomon
+      POSTGRES_DB: gnomon
+    ports:
+      - '5433:5432'
+    volumes:
+      - gnomon-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gnomon']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  gnomon-pgdata:

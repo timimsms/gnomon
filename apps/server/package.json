@@ -1,0 +1,11 @@
+{
+  "name": "@gnomon/server",
+  "version": "0.0.0",
+  "description": "Hono API, Drizzle schema, pg-boss jobs. Phase 2.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=26"
+  }
+}

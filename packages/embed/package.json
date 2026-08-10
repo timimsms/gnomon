@@ -1,0 +1,8 @@
+{
+  "name": "@gnomon/embed",
+  "version": "0.0.0",
+  "description": "Lit web component and renderer adapter. Phase 4.",
+  "license": "MIT",
+  "type": "module",
+  "private": true
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@gnomon/loader",
+  "version": "0.0.0",
+  "description": "The <script> tag payload. Phase 4.",
+  "license": "MIT",
+  "type": "module",
+  "private": true
+}
