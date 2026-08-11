@@ -14,6 +14,9 @@ export type {
   TimeZoneId,
 } from './types.js';
 
+export type { ExpandOptions } from './expand.js';
+export { expandEvent, expandEvents } from './expand.js';
+
 export {
   assertWindow,
   InvalidWindowError,
