@@ -18,5 +18,9 @@
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "rrule-temporal": "^2.2.0",
+    "temporal-polyfill": "^1.0.3"
   }
 }

@@ -13,12 +13,36 @@ import type { QueryWindow } from './types.js';
 
 export const MAX_WINDOW_DAYS = 400;
 
+/**
+ * The window cap alone is NOT sufficient.
+ *
+ * A 400-day window is legal, and `FREQ=MINUTELY` inside it expands to roughly
+ * 576,000 occurrences -- a request that passes every bound above and still
+ * exhausts the server. The two limits are independent because they fail
+ * independently: one bounds how far the client asked, the other bounds how
+ * dense the stored rule is.
+ *
+ * Kept distinct in the error type as well, because the remedies differ: a
+ * caller hitting the window cap should narrow the request, while a caller
+ * hitting this one cannot fix it from the client side at all.
+ */
+export const MAX_OCCURRENCES = 10_000;
+
 export class WindowTooLargeError extends Error {
   constructor(requestedDays: number) {
     super(
       `Requested expansion window of ${requestedDays} days exceeds the maximum of ${MAX_WINDOW_DAYS}.`,
     );
     this.name = 'WindowTooLargeError';
+  }
+}
+
+export class TooManyOccurrencesError extends Error {
+  constructor(readonly limit: number = MAX_OCCURRENCES) {
+    super(
+      `Expansion produced more than ${limit} occurrences. Narrow the window or reduce the rule's frequency.`,
+    );
+    this.name = 'TooManyOccurrencesError';
   }
 }
 
