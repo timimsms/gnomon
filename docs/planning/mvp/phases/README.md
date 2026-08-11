@@ -31,8 +31,8 @@ there is still nothing to look at. That is the intended shape:
 | Phase | Scope | Size | Risk | Status |
 |---|---|---|---|---|
 | [0](00-foundation.md) | Foundation, license gate, CI | S | Low | ✅ done |
-| [1](01-core-domain.md) | Core domain, recurrence, conformance corpus | L | **High** | 🚧 expansion + corpus done; ICS interop remaining |
-| [2](02-tenancy-auth.md) | Drizzle schema, RLS, JWT verification | M | **High** | ⬜ |
+| [1](01-core-domain.md) | Core domain, recurrence, conformance corpus | L | **High** | ✅ done |
+| [2](02-tenancy-auth.md) | Drizzle schema, RLS, JWT verification | M | **High** | ⬜ next |
 | [3](03-read-api.md) | Read API, ETag, OpenAPI | S | Low | ⬜ |
 | [4](04-embed-surface.md) | Renderer adapter, Lit component, loader | L | Medium | ⬜ |
 | [5](05-ics-feed-out.md) | Tokened ICS feeds | S | Low | ⬜ |
@@ -72,10 +72,11 @@ $ node --harmony-temporal -e "console.log(typeof Temporal)"
 undefined          # the V8 flag exists and defaults on, but Node exposes nothing
 ```
 
-The premise does not hold on this runtime. Phase 1 must decide whether
-`@gnomon/core` depends on `temporal-polyfill` unconditionally, or injects a
-Temporal implementation at the boundary. This is spelled out in
-[Phase 1](01-core-domain.md#12-temporal-acquisition-o7).
+The premise does not hold on this runtime. Resolved in
+[ADR-0006](../../../decisions/0006-temporal-acquisition.md): `@gnomon/core`
+depends on `temporal-polyfill` on both server and client, behind a single
+`src/temporal.ts` re-export, so switching to native later is a one-file
+change. `packages/core/test/purity.test.ts` enforces the chokepoint.
 
 The good news, also verified: `rrule-temporal` operates on whatever
 `ZonedDateTime` objects it is handed and does **not** require a global

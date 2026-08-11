@@ -1,6 +1,6 @@
 # Phase 1 — Core domain ⚠️ highest risk
 
-**Status:** 🚧 In progress — decisions closed, expansion and corpus done, ICS interop remaining
+**Status:** ✅ Complete
 **Depends on:** Phase 0
 **Blocks:** Phases 2–7 (every stored event is shaped by decisions made here)
 **Decisions in play:** L4 (read-mostly), L6 (Temporal), L9 (I/O-free core)
@@ -159,11 +159,16 @@ underspecified by RFC 5545, the fixture records **our** decision and cites it.
 Via `node-ical` (Apache-2.0). Handles `RRULE` expansion, `EXDATE`,
 `RECURRENCE-ID`, and Windows→IANA timezone mapping.
 
-> `node-ical` is a Node-oriented library and pulls I/O-capable dependencies.
-> L9 requires `@gnomon/core` to stay I/O-free. Confirm during this phase
-> whether it can be imported cleanly in a browser context; if not, ICS parsing
-> moves to a `@gnomon/core/ics` subpath export or to the server package, and
-> the core stays pure. **Decide this before writing against it.**
+**Resolved — it cannot.** `node-ical` 0.27.1's entry imports `node:fs`, its
+parser imports `node:crypto`, and its `exports` map offers no way to reach the
+parser without the `fs` import. ICS interop therefore lives behind a
+`@gnomon/core/ics` subpath, documented Node-only; the main entry stays pure.
+See [ADR-0008](../../../decisions/0008-ics-parsing-is-a-node-only-subpath.md).
+
+Its dependency footprint is otherwise excellent — only `rrule-temporal` and
+`temporal-polyfill`, both already ours. It is used **strictly as a text
+parser**: it shares our `rrule-temporal` and would expand recurrences itself,
+inheriting all three defects `expand.ts` corrects.
 
 ### 1.8 ICS serialise (out)
 
@@ -196,11 +201,15 @@ the correction and watching the specific fixture go red.
 | DST gap shift is sticky | Daily 02:30 `America/New_York` returns 03:30 on 2026-03-08 **and every day after**, though 02:30 exists again on 03-09 | Only the gap day moves | `reanchorWallClock` — re-anchor each occurrence to DTSTART's wall-clock time, letting Temporal's `compatible` disambiguation shift only where required |
 | Implied `BYMONTHDAY` clamps, and the clamp sticks | `FREQ=MONTHLY` from 2026-01-31 returns Jan 31, **Feb 28, Mar 28, Apr 28** — wrong even for March, which has a 31st | Jan 31, Mar 31, May 31, Jul 31 | `normalizeRule` — make RFC 5545's own default explicit (`BYMONTHDAY` from DTSTART), routing onto the library's correct path |
 | Implied yearly date clamps | `FREQ=YEARLY` from 2024-02-29 returns 2025-02-28 | 2028-02-29 | Same, injecting `BYMONTH` + `BYMONTHDAY` |
+| RRULE parts are reordered on parse | `FREQ=WEEKLY;BYDAY=MO;COUNT=3` comes back as `FREQ=WEEKLY;COUNT=3;BYDAY=MO` | Byte-stable output for one rule | `canonicalRRule` — emit a fixed part order. Harmless semantically; a feed whose bytes change on every regeneration defeats the ETag work in phases 3.3 and 5.3 |
 
-The pattern in all three is an iteration cursor that is mutated when a date is
-invalid and then carries the error forward. Worth knowing before a dependency
-bump: if a `regression` fixture starts failing, the library was fixed upstream
-and our correction may now double-apply.
+The first three share a cause: an iteration cursor mutated when a date is
+invalid, carrying the error forward. The fourth is a formatting choice rather
+than a correctness bug, and matters only because ICS output has to be stable.
+
+Worth knowing before a dependency bump: if a `regression` fixture starts
+failing, the library was fixed upstream and our correction may now
+double-apply.
 
 ## Exit criteria
 
@@ -211,11 +220,16 @@ and our correction may now double-apply.
       answer is a choice rather than a rule
 - [x] No expansion path can be reached without passing `assertWindow`, and an
       occurrence-count cap exists independent of the day cap
-- [ ] `@gnomon/core` expands a nasty real-world ICS file correctly across a DST
-      boundary — expansion is proven; the **ICS parse half is not written yet**
-- [ ] Round-trip reaches a fixed point across the whole corpus
-- [ ] `@gnomon/core` still has no I/O — or the exception is an ADR, not an
-      accident (open until 1.7 settles `node-ical`)
+- [x] `@gnomon/core` expands a nasty real-world ICS file correctly across a DST
+      boundary, with fixtures proving it
+- [x] Round-trip reaches a fixed point across the whole corpus — and, more
+      strongly, preserves *expanded occurrences* per fixture, so a systematic
+      misreading cannot survive by being byte-stable
+- [x] `@gnomon/core`'s main entry has no I/O; the exception is
+      [ADR-0008](../../../decisions/0008-ics-parsing-is-a-node-only-subpath.md),
+      and `test/purity.test.ts` enforces it rather than trusting review
+
+**93 tests.**
 
 ---
 
