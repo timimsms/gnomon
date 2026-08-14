@@ -51,7 +51,7 @@ decisions live in [`docs/decisions/README.md`](../../../decisions/README.md).
 
 | Decision | Question | Must close before | Current state |
 |---|---|---|---|
-| O2 | JWT signing: HS256 vs. EdDSA + JWKS | Phase 2 work item 2.3 | Open — leaning EdDSA |
+| O2 | JWT signing: HS256 vs. EdDSA + JWKS | Phase 2 work item 2.1 | ✅ Closed — EdDSA, registered public keys ([ADR-0009](../../../decisions/0009-eddsa-with-registered-public-keys.md)) |
 | O4 | Materialise occurrences vs. expand on read | Phase 1 work item 1.3 | ✅ Closed — expand on read ([ADR-0007](../../../decisions/0007-expand-on-read.md)) |
 | O5 | All-day semantics: floating vs. zone-anchored | **Phase 1 work item 1.1** — schema-affecting | ✅ Closed — floating dates ([ADR-0005](../../../decisions/0005-all-day-events-are-floating-dates.md)) |
 | O6 | Governance model | Phase 7 | Open — no impact before then |

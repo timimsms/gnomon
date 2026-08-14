@@ -30,13 +30,13 @@ Last reviewed: 2026-08-10
 
 | # | Question | Blocks | Notes |
 |---|---|---|---|
-| O2 | JWT signing: HS256 per-tenant shared secret vs. EdDSA + JWKS | Phase 2 | HS256 ships faster. EdDSA avoids secret distribution and scales to self-serve onboarding. Lean EdDSA if we expect more than ~10 integrators. |
 | O6 | Governance model (BDFL vs. contributor ladder) | Phase 7 | Only matters when outside contributors arrive. |
 
 ### Closed
 
 - **O1 (name)** — resolved: **Gnomon**. The shadow-casting pin on a sundial: the part that turns time into something readable off a surface. npm scope `@gnomon/*`.
 - **O3 (design partner)** — resolved: none. v0.1 stays generic (see L11).
+- **O2 (JWT signing)** — resolved: EdDSA (Ed25519) verified against public keys registered at onboarding; JWKS deferred as an additive change. Only one algorithm is accepted, which removes algorithm confusion by construction. See [ADR-0009](0009-eddsa-with-registered-public-keys.md).
 - **O4 (materialise vs. expand on read)** — resolved: expand on read, bounded by both a window cap and an occurrence-count cap. See [ADR-0007](0007-expand-on-read.md).
 - **O5 (all-day semantics)** — resolved: floating dates, as a discriminated union with exclusive `endDate`. Zone-anchored indexing is derived, not stored as truth. See [ADR-0005](0005-all-day-events-are-floating-dates.md).
 - **O7 (server Temporal)** — resolved: `temporal-polyfill` on both server and client, behind a single re-export module. Amends L6, whose "Node 26+ is native" premise was verified false. See [ADR-0006](0006-temporal-acquisition.md).
