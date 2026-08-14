@@ -1,6 +1,6 @@
 # Phase 2 — Tenancy and auth
 
-**Status:** ⬜
+**Status:** 🚧 In progress — O2 closed, token verification done; RLS blocked on Docker
 **Depends on:** Phase 1 (the schema encodes Phase 1's timing model)
 **Blocks:** Phases 3–7
 **Decisions in play:** L5 (no accounts), L7 (RLS tenancy), L8 (Postgres only), ADR-0009 (EdDSA)
@@ -90,6 +90,22 @@ valid key for tenant A but claiming `tid: B`, an unknown `kid`, a missing
 Crypto verification is independent of Postgres, so this is buildable and
 testable without Docker.
 
+### 2.4a Verified, not assumed
+
+Both security claims were checked by breaking them and watching a specific
+test go red — the same discipline the phase 1 corpus used.
+
+| Control disabled | Result |
+|---|---|
+| Tenant cross-check removed, `tid` claim trusted | Cross-tenant test goes red — a validly-signed token asserting another tenant is accepted |
+| Header `alg` pre-check removed, allowlist left at `['EdDSA']` | All tests still pass — the allowlist alone stops the attack |
+| Allowlist widened to `['EdDSA', 'HS256']` | **The HS256 confusion forgery verifies.** An attacker holding only the public key we publish can mint a token for that tenant |
+
+The third row is the one that matters: the single-entry allowlist is the
+actual control, and the header check is defence in depth. This is why
+ADR-0009 treats "accept one algorithm" as a security property rather than a
+simplification.
+
 ### 2.5 Token-minting reference implementations
 
 Node plus one other language — Python or Go — since integrators will not all
@@ -118,8 +134,8 @@ testing it against a superuser connection tests nothing.
       demonstrated to *fail* if `FORCE ROW LEVEL SECURITY` is dropped
 - [ ] Tenant context does not leak across pooled connection checkouts, proven
       under a pool
-- [ ] Algorithm-confusion and `alg: none` attacks are rejected, with tests
-- [ ] A token signed by tenant A's key but claiming tenant B's `tid` is
+- [x] Algorithm-confusion and `alg: none` attacks are rejected, with tests
+- [x] A token signed by tenant A's key but claiming tenant B's `tid` is
       rejected — the tenant comes from the key, not the claim
 - [ ] Every token-minting reference implementation is exercised against the
       real verifier
