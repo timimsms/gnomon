@@ -26,6 +26,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # The Go reference implementation in examples/token-minting is verified
+      # against the real token verifier. Without a toolchain that suite skips,
+      # and a skipped example is an unverified example -- so the test itself
+      # fails when Go is missing under CI rather than passing quietly.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
       # --frozen-lockfile: a PR that changes dependencies must commit the
       # lockfile change, so the licence gate below inspects what will actually
       # be installed rather than a fresh resolution.

@@ -1,6 +1,6 @@
 # Phase 2 — Tenancy and auth
 
-**Status:** 🚧 In progress — O2 closed, token verification done; RLS blocked on Docker
+**Status:** 🚧 In progress — O2 closed, token verification and reference implementations done; RLS blocked on Docker
 **Depends on:** Phase 1 (the schema encodes Phase 1's timing model)
 **Blocks:** Phases 3–7
 **Decisions in play:** L5 (no accounts), L7 (RLS tenancy), L8 (Postgres only), ADR-0009 (EdDSA)
@@ -113,10 +113,25 @@ be on Node. Copy-pasteable, dependency-minimal, correct about TTL and clock
 skew. These are documentation that happens to compile, and they are the first
 thing an integrator reads.
 
-Ed25519 signing is in the standard library or a first-party package for every
-language an integrator is plausibly on, so this needs no exotic dependency.
-Each reference implementation should be exercised against the real verifier
-in tests — an example that has never been verified is a liability.
+**Shipped: Node and Go, both zero-dependency.** Node's `crypto` and Go's
+`crypto/ed25519` are built in, and a JWT is three base64url segments joined by
+dots — so neither example needs a JWT library, and an integrator can read the
+whole file before trusting it. `go run mint.go` needs no `go.mod`.
+
+Go was chosen over Python for a specific reason: `cryptography` was not
+installed on the development machine, so a Python example could not have been
+*run* against the verifier. Shipping two verified examples beats shipping
+three where one is decorative — which is the liability this work item names.
+
+Also ships `keygen.mjs`, since an integrator's first step is generating a key
+pair, and it is the step where a private key most easily ends up somewhere it
+should not.
+
+Every example is exercised against the **real verifier** in
+`apps/server/test/reference-implementations.test.ts`, which also asserts the
+two implementations emit identical headers and claims — divergence means one
+was edited and the other was not. A `toolchain coverage` test fails the build
+if CI lacks Go, because a skipped example is an unverified example.
 
 ### 2.6 Test infrastructure
 
@@ -137,8 +152,8 @@ testing it against a superuser connection tests nothing.
 - [x] Algorithm-confusion and `alg: none` attacks are rejected, with tests
 - [x] A token signed by tenant A's key but claiming tenant B's `tid` is
       rejected — the tenant comes from the key, not the claim
-- [ ] Every token-minting reference implementation is exercised against the
-      real verifier
+- [x] Every token-minting reference implementation is exercised against the
+      real verifier, and CI fails rather than skips if a toolchain is missing
 - [ ] Migrations apply cleanly from empty, and are readable
 
 ---
