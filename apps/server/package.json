@@ -12,14 +12,18 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@gnomon/core": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "jose": "^6.2.8"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "drizzle-kit": "^0.31.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

@@ -1,6 +1,6 @@
 # Phase 2 — Tenancy and auth
 
-**Status:** 🚧 In progress — O2 closed, token verification and reference implementations done; RLS blocked on Docker
+**Status:** 🚧 In progress — O2 closed; schema, token verification and reference implementations done; RLS blocked on Docker
 **Depends on:** Phase 1 (the schema encodes Phase 1's timing model)
 **Blocks:** Phases 3–7
 **Decisions in play:** L5 (no accounts), L7 (RLS tenancy), L8 (Postgres only), ADR-0009 (EdDSA)
@@ -60,6 +60,41 @@ follow Phase 1's resolution of O5 — this is the migration that O5 blocks.
 Migration files are reviewed as public API: the schema is visible to
 integrators and to anyone self-hosting, so readability is a requirement rather
 than a nicety.
+
+`drizzle-kit generate` emits migration SQL **without a database connection**,
+so the schema is written and reviewed offline; only applying it needs Postgres.
+
+Two things beyond the table list are worth naming:
+
+**Composite foreign keys.** Children reference their parent by
+`(calendar_id, tenant_id)`, not `calendar_id` alone. The tenant column being
+part of the key makes a cross-tenant reference impossible at the storage
+layer, rather than merely discouraged by a policy someone might misconfigure —
+defence that survives RLS being switched off.
+
+**The timing union is enforced by CHECK constraints,** not by convention.
+`timing_kind = 'allDay'` alongside a populated `start_local` is otherwise a
+representable state with no meaning, and every reader has to decide what to do
+about it.
+
+**`events.search_span`** is a `tstzrange` GiST index used as a coarse
+pre-filter, with exact boundaries always applied afterwards by
+`@gnomon/core`. Its only invariant is that it is never *narrower* than
+reality: a too-wide span costs one wasted expansion, a too-narrow one silently
+drops events and nothing downstream can detect it. All-day spans are padded by
+±14 hours — the widest IANA offset — so they hold for **any** rendering
+timezone and, critically, do not depend on `calendars.time_zone`. Anchoring
+them to the calendar zone would mean correcting a misconfigured timezone
+silently invalidated every stored span, which is the coupling ADR-0005
+rejected zone-anchored storage to avoid.
+
+A near-miss worth recording: the composite foreign keys were first written as
+raw `sql` template literals in Drizzle's table-extras array, which Drizzle
+**accepts and silently ignores**. It reported `events ... 0 fks` and emitted a
+migration with no foreign key on events at all; typecheck passed. Nothing
+would have caught it until cross-tenant rows appeared. `test/schema.test.ts`
+now asserts against the emitted SQL, and that test was confirmed to fail when
+the mistake is reintroduced.
 
 ### 2.3 Row-level security policies
 
@@ -154,7 +189,11 @@ testing it against a superuser connection tests nothing.
       rejected — the tenant comes from the key, not the claim
 - [x] Every token-minting reference implementation is exercised against the
       real verifier, and CI fails rather than skips if a toolchain is missing
-- [ ] Migrations apply cleanly from empty, and are readable
+- [ ] Migrations apply cleanly from empty (needs Docker), and are readable
+- [x] Every tenant-scoped table carries a non-null `tenant_id`, asserted from
+      the schema so a new table cannot quietly escape RLS
+- [x] `search_span` is proven a conservative superset across the phase 1
+      corpus, in the extreme rendering timezones (+14, −12, UTC)
 
 ---
 
