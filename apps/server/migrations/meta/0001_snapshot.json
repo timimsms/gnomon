@@ -1,6 +1,6 @@
 {
-  "id": "784559b4-76cc-4724-929f-d7ad8b19c650",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "6e39a121-d60f-449a-a860-fbd8a4373ae5",
+  "prevId": "784559b4-76cc-4724-929f-d7ad8b19c650",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -84,9 +84,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -151,35 +151,35 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "calendars_tenant_id_tenants_id_fk": {
           "name": "calendars_tenant_id_tenants_id_fk",
           "tableFrom": "calendars",
-          "tableTo": "tenants",
           "columnsFrom": [
             "tenant_id"
           ],
+          "tableTo": "tenants",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "calendars_id_tenant_key": {
           "name": "calendars_id_tenant_key",
-          "nullsNotDistinct": false,
           "columns": [
             "id",
             "tenant_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -334,9 +334,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "events_calendar_uid_key": {
           "name": "events_calendar_uid_key",
@@ -355,9 +355,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "events_search_span_idx": {
           "name": "events_search_span_idx",
@@ -370,37 +370,37 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "gist",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "events_calendar_tenant_fk": {
           "name": "events_calendar_tenant_fk",
           "tableFrom": "events",
-          "tableTo": "calendars",
           "columnsFrom": [
             "calendar_id",
             "tenant_id"
           ],
+          "tableTo": "calendars",
           "columnsTo": [
             "id",
             "tenant_id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "events_id_tenant_key": {
           "name": "events_id_tenant_key",
-          "nullsNotDistinct": false,
           "columns": [
             "id",
             "tenant_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -491,9 +491,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "feed_tokens_tenant_calendar_idx": {
           "name": "feed_tokens_tenant_calendar_idx",
@@ -512,26 +512,26 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "feed_tokens_calendar_tenant_fk": {
           "name": "feed_tokens_calendar_tenant_fk",
           "tableFrom": "feed_tokens",
-          "tableTo": "calendars",
           "columnsFrom": [
             "calendar_id",
             "tenant_id"
           ],
+          "tableTo": "calendars",
           "columnsTo": [
             "id",
             "tenant_id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -632,26 +632,26 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "ics_sources_calendar_tenant_fk": {
           "name": "ics_sources_calendar_tenant_fk",
           "tableFrom": "ics_sources",
-          "tableTo": "calendars",
           "columnsFrom": [
             "calendar_id",
             "tenant_id"
           ],
+          "tableTo": "calendars",
           "columnsTo": [
             "id",
             "tenant_id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -734,9 +734,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "recurrence_overrides_tenant_idx": {
           "name": "recurrence_overrides_tenant_idx",
@@ -749,26 +749,26 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "recurrence_overrides_event_tenant_fk": {
           "name": "recurrence_overrides_event_tenant_fk",
           "tableFrom": "recurrence_overrides",
-          "tableTo": "events",
           "columnsFrom": [
             "event_id",
             "tenant_id"
           ],
+          "tableTo": "events",
           "columnsTo": [
             "id",
             "tenant_id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -830,24 +830,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "tenant_keys_tenant_id_tenants_id_fk": {
           "name": "tenant_keys_tenant_id_tenants_id_fk",
           "tableFrom": "tenant_keys",
-          "tableTo": "tenants",
           "columnsFrom": [
             "tenant_id"
           ],
+          "tableTo": "tenants",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -918,10 +918,10 @@
     }
   },
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

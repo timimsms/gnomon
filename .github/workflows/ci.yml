@@ -13,6 +13,30 @@ concurrency:
 jobs:
   gates:
     runs-on: ubuntu-latest
+
+    # The tenancy suite proves tenant A cannot read tenant B's events, and it
+    # cannot run against a mock -- nor against a superuser connection, which
+    # would pass while proving nothing. A service container gives CI a real
+    # Postgres without needing a Docker daemon on anyone's laptop, which is the
+    # whole point of the URL-based harness (ADR-0010).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      GNOMON_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +57,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
+          # No go.sum -- the reference implementation is stdlib-only -- and
+          # setup-go warns on every run when it cannot find one.
+          cache: false
 
       # --frozen-lockfile: a PR that changes dependencies must commit the
       # lockfile change, so the licence gate below inspects what will actually

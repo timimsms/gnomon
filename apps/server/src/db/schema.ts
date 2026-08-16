@@ -12,6 +12,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -119,8 +120,13 @@ export const calendars = pgTable(
   (table) => [
     index('calendars_tenant_idx').on(table.tenantId),
     // Redundant given the primary key, and required as the target of the
-    // composite foreign keys below.
-    uniqueIndex('calendars_id_tenant_key').on(table.id, table.tenantId),
+    // composite foreign keys below. A UNIQUE CONSTRAINT rather than a unique
+    // index on purpose: drizzle-kit emits every `ALTER TABLE ... ADD
+    // FOREIGN KEY` before any `CREATE UNIQUE INDEX`, so an index target does
+    // not exist yet when the constraint is added and the migration fails with
+    // "no unique constraint matching given keys". A constraint is inline in
+    // CREATE TABLE and is therefore already there.
+    unique('calendars_id_tenant_key').on(table.id, table.tenantId),
   ],
 );
 
@@ -195,8 +201,8 @@ export const events = pgTable(
     // `GET /events?from&to` is the query this exists for.
     index('events_search_span_idx').using('gist', table.searchSpan),
 
-    // Required as the target of recurrence_overrides' composite key below.
-    uniqueIndex('events_id_tenant_key').on(table.id, table.tenantId),
+    // Constraint, not index -- see the note on calendars_id_tenant_key.
+    unique('events_id_tenant_key').on(table.id, table.tenantId),
 
     // Cross-tenant references are impossible at the storage layer, not just
     // discouraged by policy. The tenant column is part of the KEY, so an
@@ -371,9 +377,37 @@ export const auditLog = pgTable(
   (table) => [index('audit_log_tenant_at_idx').on(table.tenantId, table.at)],
 );
 
-/** Every table that RLS must cover. `test/schema.test.ts` checks this is complete. */
+/** Every table carrying a tenant_id. `test/schema.test.ts` checks this is complete. */
 export const TENANT_SCOPED_TABLES = [
   tenantKeys,
+  calendars,
+  events,
+  recurrenceOverrides,
+  feedTokens,
+  icsSources,
+  auditLog,
+] as const;
+
+/**
+ * The tables row-level security actually covers.
+ *
+ * `tenant_keys` is deliberately ABSENT, and the reason is a chicken-and-egg
+ * that is easy to miss: RLS policies read `gnomon.tenant_id`, and that
+ * setting is only known AFTER a token has been verified -- which requires
+ * looking up the signing key by `kid` first (ADR-0009). A tenant-scoped
+ * policy on `tenant_keys` would gate the very lookup that establishes the
+ * tenant, and no request could ever authenticate.
+ *
+ * The exposure is bounded and acceptable: the table holds public keys and a
+ * kid-to-tenant mapping. ADR-0009's whole premise is that a dump of it mints
+ * nothing. What an attacker with the app role could learn is which key ids
+ * belong to which tenants, which is not worth a policy that cannot work.
+ *
+ * A policy permitting reads only when no tenant context is set was
+ * considered and rejected: an attacker holding the app role simply would not
+ * set the context, so it buys nothing for the complexity.
+ */
+export const RLS_TABLES = [
   calendars,
   events,
   recurrenceOverrides,
