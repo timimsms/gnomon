@@ -7,7 +7,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./ics": "./src/ics/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -18,5 +19,10 @@
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "node-ical": "^0.27.1",
+    "rrule-temporal": "^2.2.0",
+    "temporal-polyfill": "^1.0.3"
   }
 }

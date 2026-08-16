@@ -1,0 +1,192 @@
+[
+  {
+    "name": "weekly across spring-forward preserves wall-clock time",
+    "why": "The canonical case Date-based recurrence libraries get wrong. A 09:00 meeting must stay at 09:00 local while the UTC offset moves -05:00 to -04:00.",
+    "timing": { "kind": "timed", "start": "2026-03-01T09:00:00", "end": "2026-03-01T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=WEEKLY;COUNT=5",
+    "window": { "from": "2026-02-25T00:00:00Z", "to": "2026-04-05T00:00:00Z" },
+    "expect": ["2026-03-01T09:00:00", "2026-03-08T09:00:00", "2026-03-15T09:00:00", "2026-03-22T09:00:00", "2026-03-29T09:00:00"],
+    "expectInstants": ["2026-03-01T14:00:00Z", "2026-03-08T13:00:00Z", "2026-03-15T13:00:00Z", "2026-03-22T13:00:00Z", "2026-03-29T13:00:00Z"]
+  },
+  {
+    "name": "occurrence inside the spring-forward gap shifts for that day only",
+    "why": "02:30 does not exist on 2026-03-08 in New York, so that day moves to 03:30. Every later day must return to 02:30. rrule-temporal carries the shift forward permanently; reanchorWallClock corrects it.",
+    "regression": "rrule-temporal 2.2.0 returns 03:30 for 03-09 onward",
+    "timing": { "kind": "timed", "start": "2026-03-06T02:30:00", "end": "2026-03-06T03:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;COUNT=6",
+    "window": { "from": "2026-03-05T00:00:00Z", "to": "2026-03-13T00:00:00Z" },
+    "expect": ["2026-03-06T02:30:00", "2026-03-07T02:30:00", "2026-03-08T03:30:00", "2026-03-09T02:30:00", "2026-03-10T02:30:00", "2026-03-11T02:30:00"]
+  },
+  {
+    "name": "ambiguous local time on fall-back resolves to the earlier instant",
+    "why": "01:30 happens twice on 2026-11-01 in New York. Temporal's 'compatible' disambiguation picks the first, which is the ICS convention. The wall-clock time is unchanged on every day.",
+    "decision": "earlier instant (EDT, -04:00) when a local time is ambiguous",
+    "timing": { "kind": "timed", "start": "2026-10-31T01:30:00", "end": "2026-10-31T02:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;COUNT=4",
+    "window": { "from": "2026-10-30T00:00:00Z", "to": "2026-11-05T00:00:00Z" },
+    "expect": ["2026-10-31T01:30:00", "2026-11-01T01:30:00", "2026-11-02T01:30:00", "2026-11-03T01:30:00"],
+    "expectInstants": ["2026-10-31T05:30:00Z", "2026-11-01T05:30:00Z", "2026-11-02T06:30:00Z", "2026-11-03T06:30:00Z"]
+  },
+  {
+    "name": "BYDAY with a negative ordinal selects the last weekday of the month",
+    "why": "Ordinal BYDAY is where month-length edge cases surface. February 2026 has exactly four Sundays.",
+    "timing": { "kind": "timed", "start": "2026-01-25T09:00:00", "end": "2026-01-25T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=MONTHLY;BYDAY=-1SU;COUNT=4",
+    "window": { "from": "2026-01-01T00:00:00Z", "to": "2026-05-01T00:00:00Z" },
+    "expect": ["2026-01-25T09:00:00", "2026-02-22T09:00:00", "2026-03-29T09:00:00", "2026-04-26T09:00:00"]
+  },
+  {
+    "name": "BYSETPOS selects the last weekday of each month",
+    "why": "BYSETPOS is frequently unimplemented or wrong. January and February 2026 both end on a weekend, so the answer is not simply the last day.",
+    "timing": { "kind": "timed", "start": "2026-01-30T09:00:00", "end": "2026-01-30T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;COUNT=4",
+    "window": { "from": "2026-01-01T00:00:00Z", "to": "2026-05-01T00:00:00Z" },
+    "expect": ["2026-01-30T09:00:00", "2026-02-27T09:00:00", "2026-03-31T09:00:00", "2026-04-30T09:00:00"]
+  },
+  {
+    "name": "UNTIL is inclusive when it equals an occurrence instant",
+    "why": "RFC 5545 3.3.10: UNTIL is inclusive. It is UTC-valued even for a zoned DTSTART, which is where off-by-one errors come from. 09:00 EDT is 13:00Z, so the third occurrence lands exactly on UNTIL.",
+    "rfc": "3.3.10",
+    "timing": { "kind": "timed", "start": "2026-06-01T09:00:00", "end": "2026-06-01T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;UNTIL=20260603T130000Z",
+    "window": { "from": "2026-05-31T00:00:00Z", "to": "2026-06-10T00:00:00Z" },
+    "expect": ["2026-06-01T09:00:00", "2026-06-02T09:00:00", "2026-06-03T09:00:00"]
+  },
+  {
+    "name": "monthly on the 31st skips short months rather than clamping",
+    "why": "RFC 5545: a BYMONTHDAY that does not exist in a month yields no occurrence for that month. Clamping to the 28th would be wrong, and clamping the cursor would corrupt every later month too.",
+    "rfc": "3.3.10",
+    "timing": { "kind": "timed", "start": "2026-01-31T09:00:00", "end": "2026-01-31T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=MONTHLY;BYMONTHDAY=31;COUNT=4",
+    "window": { "from": "2026-01-01T00:00:00Z", "to": "2026-08-15T00:00:00Z" },
+    "expect": ["2026-01-31T09:00:00", "2026-03-31T09:00:00", "2026-05-31T09:00:00", "2026-07-31T09:00:00"]
+  },
+  {
+    "name": "monthly with the day implied by DTSTART behaves as if BYMONTHDAY were explicit",
+    "why": "RFC 5545: absent BYMONTHDAY defaults to DTSTART's day of month, so this must match the explicit case exactly. rrule-temporal instead clamps to Feb 28 AND moves its cursor there, returning Mar 28 and Apr 28 -- wrong even for months that have a 31st. normalizeRule makes the default explicit.",
+    "regression": "rrule-temporal 2.2.0 returns 2026-02-28, 2026-03-28, 2026-04-28",
+    "rfc": "3.3.10",
+    "timing": { "kind": "timed", "start": "2026-01-31T09:00:00", "end": "2026-01-31T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=MONTHLY;COUNT=4",
+    "window": { "from": "2026-01-01T00:00:00Z", "to": "2026-08-15T00:00:00Z" },
+    "expect": ["2026-01-31T09:00:00", "2026-03-31T09:00:00", "2026-05-31T09:00:00", "2026-07-31T09:00:00"]
+  },
+  {
+    "name": "yearly on 29 February does not occur in a non-leap year",
+    "why": "29 February does not exist in 2025, so the rule yields nothing that year. Falling back to 28 February invents an occurrence the rule never specified.",
+    "regression": "rrule-temporal 2.2.0 returns 2025-02-28",
+    "timing": { "kind": "timed", "start": "2024-02-29T09:00:00", "end": "2024-02-29T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=YEARLY;COUNT=3",
+    "window": { "from": "2025-01-01T00:00:00Z", "to": "2025-12-31T00:00:00Z" },
+    "expect": []
+  },
+  {
+    "name": "yearly on 29 February lands on the next leap year",
+    "why": "The other half of the leap-year case: skipping 2025 and 2026 must not consume the COUNT, and 2028 must still be produced.",
+    "timing": { "kind": "timed", "start": "2024-02-29T09:00:00", "end": "2024-02-29T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=YEARLY;COUNT=3",
+    "window": { "from": "2028-01-01T00:00:00Z", "to": "2028-12-31T00:00:00Z" },
+    "expect": ["2028-02-29T09:00:00"]
+  },
+  {
+    "name": "EXDATE removes a matching occurrence",
+    "why": "Baseline exclusion.",
+    "timing": { "kind": "timed", "start": "2026-06-01T09:00:00", "end": "2026-06-01T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;COUNT=4",
+    "exceptionDates": ["2026-06-02T09:00:00"],
+    "window": { "from": "2026-05-31T00:00:00Z", "to": "2026-06-10T00:00:00Z" },
+    "expect": ["2026-06-01T09:00:00", "2026-06-03T09:00:00", "2026-06-04T09:00:00"]
+  },
+  {
+    "name": "EXDATE matches by instant, not by string form",
+    "why": "The same moment written as a UTC instant must exclude the same occurrence as the local form. 2026-06-02T13:00Z is 09:00 in New York.",
+    "timing": { "kind": "timed", "start": "2026-06-01T09:00:00", "end": "2026-06-01T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;COUNT=4",
+    "exceptionDates": ["2026-06-02T13:00:00Z"],
+    "window": { "from": "2026-05-31T00:00:00Z", "to": "2026-06-10T00:00:00Z" },
+    "expect": ["2026-06-01T09:00:00", "2026-06-03T09:00:00", "2026-06-04T09:00:00"]
+  },
+  {
+    "name": "an occurrence straddling the window start is included",
+    "why": "The event begins before `from` and is still running at `from`. Filtering on start alone would drop it, and an overnight event would vanish from the morning's view.",
+    "timing": { "kind": "timed", "start": "2026-06-01T18:00:00", "end": "2026-06-02T02:00:00", "timeZone": "America/New_York" },
+    "window": { "from": "2026-06-02T00:00:00Z", "to": "2026-06-05T00:00:00Z" },
+    "expect": ["2026-06-01T18:00:00"]
+  },
+  {
+    "name": "a zero-duration occurrence exactly at the window start is included",
+    "why": "Under a plain half-open overlap test, end > from is false when start == end == from, so the event would silently disappear.",
+    "timing": { "kind": "timed", "start": "2026-06-02T00:00:00", "end": "2026-06-02T00:00:00", "timeZone": "UTC" },
+    "window": { "from": "2026-06-02T00:00:00Z", "to": "2026-06-05T00:00:00Z" },
+    "expect": ["2026-06-02T00:00:00"]
+  },
+  {
+    "name": "a zero-duration occurrence exactly at the window end is excluded",
+    "why": "The window is half-open. The instant `to` belongs to the next window, or it would be returned twice when a client pages through consecutive ranges.",
+    "timing": { "kind": "timed", "start": "2026-06-05T00:00:00", "end": "2026-06-05T00:00:00", "timeZone": "UTC" },
+    "window": { "from": "2026-06-02T00:00:00Z", "to": "2026-06-05T00:00:00Z" },
+    "expect": []
+  },
+  {
+    "name": "an all-day event is visible from a zone where its date has begun",
+    "why": "ADR-0005: all-day events are floating dates resolved against the caller's rendering zone. In Auckland, 3 October has already started when the window opens.",
+    "timing": { "kind": "allDay", "startDate": "2026-10-03", "endDate": "2026-10-04" },
+    "renderTimeZone": "Pacific/Auckland",
+    "window": { "from": "2026-10-03T00:00:00Z", "to": "2026-10-03T06:00:00Z" },
+    "expect": ["2026-10-03"]
+  },
+  {
+    "name": "the same all-day event is not yet visible from a zone where its date has not begun",
+    "why": "The mirror of the previous case, and the reason all-day events cannot carry a stored anchor. In Honolulu, 3 October begins at 10:00Z -- after this window closes. Different answers for different viewers is correct, not a rounding error.",
+    "timing": { "kind": "allDay", "startDate": "2026-10-03", "endDate": "2026-10-04" },
+    "renderTimeZone": "Pacific/Honolulu",
+    "window": { "from": "2026-10-03T00:00:00Z", "to": "2026-10-03T06:00:00Z" },
+    "expect": []
+  },
+  {
+    "name": "a weekly all-day series crosses a DST boundary without artefacts",
+    "why": "Floating dates have no offset to shift. A weekly all-day event spanning the US spring-forward must land on the same weekday every week, which is the payoff of ADR-0005.",
+    "timing": { "kind": "allDay", "startDate": "2026-03-02", "endDate": "2026-03-03" },
+    "recurrence": "FREQ=WEEKLY;COUNT=3",
+    "renderTimeZone": "America/New_York",
+    "window": { "from": "2026-03-01T00:00:00Z", "to": "2026-03-20T00:00:00Z" },
+    "expect": ["2026-03-02", "2026-03-09", "2026-03-16"]
+  },
+  {
+    "name": "a multi-day all-day event straddling the window start is included",
+    "why": "Exclusive end date, and the sweep must reach back far enough to find a span that began before the window.",
+    "timing": { "kind": "allDay", "startDate": "2026-06-01", "endDate": "2026-06-05" },
+    "renderTimeZone": "UTC",
+    "window": { "from": "2026-06-03T00:00:00Z", "to": "2026-06-10T00:00:00Z" },
+    "expect": ["2026-06-01"]
+  },
+  {
+    "name": "an all-day event ending exactly at the window start is excluded",
+    "why": "endDate is EXCLUSIVE (RFC 5545 DTEND for DATE values). A single-day event on 2 June ends at 3 June, which is the instant the window opens, so it does not overlap.",
+    "rfc": "3.8.2.2",
+    "timing": { "kind": "allDay", "startDate": "2026-06-02", "endDate": "2026-06-03" },
+    "renderTimeZone": "UTC",
+    "window": { "from": "2026-06-03T00:00:00Z", "to": "2026-06-10T00:00:00Z" },
+    "expect": []
+  },
+  {
+    "name": "a DTSTART not synchronised with the rule is not itself an occurrence",
+    "why": "RFC 5545 3.3.10 declares this case undefined, so there is no correct answer to inherit. DTSTART is a Sunday; the rule asks for Mondays. We follow the dominant convention and exclude it.",
+    "decision": "exclude a non-matching DTSTART, matching python-dateutil and rrule.js",
+    "rfc": "3.3.10",
+    "timing": { "kind": "timed", "start": "2026-03-01T09:00:00", "end": "2026-03-01T10:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=WEEKLY;BYDAY=MO;COUNT=3",
+    "window": { "from": "2026-02-25T00:00:00Z", "to": "2026-03-25T00:00:00Z" },
+    "expect": ["2026-03-02T09:00:00", "2026-03-09T09:00:00", "2026-03-16T09:00:00"]
+  },
+  {
+    "name": "nominal duration keeps the end wall-clock stable across spring-forward",
+    "why": "A 09:00-17:00 shift stays 09:00-17:00 on a 23-hour day. Preserving elapsed time instead would show 18:00 twice a year, which reads as a bug to anyone looking at it.",
+    "decision": "nominal wall-clock duration, not exact elapsed duration",
+    "timing": { "kind": "timed", "start": "2026-03-07T09:00:00", "end": "2026-03-07T17:00:00", "timeZone": "America/New_York" },
+    "recurrence": "FREQ=DAILY;COUNT=2",
+    "window": { "from": "2026-03-06T00:00:00Z", "to": "2026-03-10T00:00:00Z" },
+    "expect": ["2026-03-07T09:00:00", "2026-03-08T09:00:00"],
+    "expectEnds": ["2026-03-07T17:00:00", "2026-03-08T17:00:00"]
+  }
+]

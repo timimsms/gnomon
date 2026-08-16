@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A superseded run tells us nothing; cancel it rather than pay for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Pinned to the range the workspace declares. The server package
+          # requires a higher floor; that is enforced by its own `engines`
+          # field, not here.
+          node-version: 22
+          cache: pnpm
+
+      # The Go reference implementation in examples/token-minting is verified
+      # against the real token verifier. Without a toolchain that suite skips,
+      # and a skipped example is an unverified example -- so the test itself
+      # fails when Go is missing under CI rather than passing quietly.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      # --frozen-lockfile: a PR that changes dependencies must commit the
+      # lockfile change, so the licence gate below inspects what will actually
+      # be installed rather than a fresh resolution.
+      - run: pnpm install --frozen-lockfile
+
+      # Licences run before typecheck and tests, per CONTRIBUTING.md. A
+      # copyleft dependency is a licensing incident, not a test failure, and
+      # should fail before anything slower runs.
+      - name: Licence compliance (ADR-0002)
+        run: pnpm lint:licenses
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Includes scripts/check-licenses.test.mjs, which proves the gate above
+      # rejects AGPL/GPL and fails closed on unknown licences. A gate never
+      # observed to reject anything is not a gate.
+      - name: Test
+        run: pnpm test

@@ -36,8 +36,8 @@ calendar renderer. Not a Google Calendar replacement.
 
 ## Quickstart
 
-Requires Node 22+ (the server package will require 26+ for native Temporal),
-pnpm 9, and Docker.
+Requires Node 22+, pnpm 9, and Docker (Postgres only — nothing before Phase 2
+needs it).
 
 ```bash
 pnpm install
@@ -63,11 +63,14 @@ fast enough that nobody skips it.
 
 ## Roadmap
 
+Phase specifications, with exit criteria, live in
+[`docs/planning/mvp/phases`](docs/planning/mvp/phases/README.md).
+
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation, license gate, CI | ✅ done |
-| 1 | Core domain, recurrence expansion, conformance corpus | next |
-| 2 | Tenancy, RLS, token auth | |
+| 1 | Core domain, recurrence expansion, conformance corpus | ✅ done |
+| 2 | Tenancy, RLS, token auth | next |
 | 3 | Read API | |
 | 4 | Embed surface, renderer adapters | |
 | 5 | ICS feed out | |
