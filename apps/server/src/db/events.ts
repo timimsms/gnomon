@@ -165,9 +165,22 @@ export function computeSearchSpan(event: CalendarEvent): string {
   return range(lower, upper);
 }
 
-/** `[lower,upper)` -- inclusive lower, exclusive upper, matching QueryWindow. */
+/**
+ * `[lower,upper)` -- inclusive lower, exclusive upper, matching QueryWindow.
+ *
+ * A zero-length event would produce `[t,t)`, which Postgres treats as an EMPTY
+ * range that overlaps nothing -- so the pre-filter would silently drop it and
+ * the event would vanish from every query. Phase 1 has a fixture for exactly
+ * this shape, and it is what caught it.
+ *
+ * Widening by a millisecond keeps the range non-empty. Safe by construction:
+ * the span only ever has to be a superset, so erring wider costs at most one
+ * expansion that returns nothing.
+ */
 function range(lower: Temporal.Instant, upper: Temporal.Instant): string {
-  return `[${lower.toString()},${upper.toString()})`;
+  const safeUpper =
+    Temporal.Instant.compare(upper, lower) <= 0 ? lower.add({ milliseconds: 1 }) : upper;
+  return `[${lower.toString()},${safeUpper.toString()})`;
 }
 
 /**

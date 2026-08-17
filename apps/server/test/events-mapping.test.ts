@@ -178,6 +178,21 @@ describe('search_span bounds', () => {
     expect(computeSearchSpan(event())).toBe('[2026-06-01T13:00:00Z,2026-06-01T13:15:00Z)');
   });
 
+  it('is never an EMPTY range, even for a zero-duration event', () => {
+    // `[t,t)` is an empty tstzrange in Postgres, and an empty range overlaps
+    // NOTHING -- so the GiST pre-filter would silently drop the event and it
+    // would be missing from every query, with no error anywhere. Found via the
+    // phase 1 corpus fixture for a zero-length occurrence once the API started
+    // querying through the index.
+    const instant = event({
+      timing: { kind: 'timed', start: '2026-06-02T00:00:00', end: '2026-06-02T00:00:00', timeZone: 'UTC' },
+    });
+    const { lower, upper } = parseSpan(computeSearchSpan(instant));
+
+    expect(upper).not.toBeNull();
+    expect(Temporal.Instant.compare(upper as Temporal.Instant, lower)).toBe(1);
+  });
+
   it('is unbounded for a rule with no UNTIL', () => {
     expect(computeSearchSpan(event({ recurrence: 'FREQ=DAILY' }))).toMatch(/,\)$/);
   });
