@@ -19,10 +19,12 @@
   "dependencies": {
     "@gnomon/core": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "jose": "^6.2.8"
+    "jose": "^6.2.8",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@types/pg": "^8.21.0",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -19,7 +19,8 @@ CREATE TABLE "calendars" (
 	"name" text NOT NULL,
 	"time_zone" text NOT NULL,
 	"colour" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "calendars_id_tenant_key" UNIQUE("id","tenant_id")
 );
 --> statement-breakpoint
 CREATE TABLE "events" (
@@ -43,6 +44,7 @@ CREATE TABLE "events" (
 	"search_span" "tstzrange" NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "events_id_tenant_key" UNIQUE("id","tenant_id"),
 	CONSTRAINT "events_timed_shape" CHECK ("events"."timing_kind" <> 'timed' OR (
             "events"."start_local" IS NOT NULL AND "events"."end_local" IS NOT NULL
             AND "events"."time_zone" IS NOT NULL
@@ -114,11 +116,9 @@ ALTER TABLE "recurrence_overrides" ADD CONSTRAINT "recurrence_overrides_event_te
 ALTER TABLE "tenant_keys" ADD CONSTRAINT "tenant_keys_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_log_tenant_at_idx" ON "audit_log" USING btree ("tenant_id","at");--> statement-breakpoint
 CREATE INDEX "calendars_tenant_idx" ON "calendars" USING btree ("tenant_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "calendars_id_tenant_key" ON "calendars" USING btree ("id","tenant_id");--> statement-breakpoint
 CREATE INDEX "events_tenant_calendar_idx" ON "events" USING btree ("tenant_id","calendar_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "events_calendar_uid_key" ON "events" USING btree ("calendar_id","uid");--> statement-breakpoint
 CREATE INDEX "events_search_span_idx" ON "events" USING gist ("search_span");--> statement-breakpoint
-CREATE UNIQUE INDEX "events_id_tenant_key" ON "events" USING btree ("id","tenant_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "feed_tokens_hash_key" ON "feed_tokens" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "feed_tokens_tenant_calendar_idx" ON "feed_tokens" USING btree ("tenant_id","calendar_id");--> statement-breakpoint
 CREATE INDEX "ics_sources_tenant_calendar_idx" ON "ics_sources" USING btree ("tenant_id","calendar_id");--> statement-breakpoint

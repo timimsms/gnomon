@@ -70,8 +70,8 @@ Phase specifications, with exit criteria, live in
 |---|---|---|
 | 0 | Foundation, license gate, CI | ✅ done |
 | 1 | Core domain, recurrence expansion, conformance corpus | ✅ done |
-| 2 | Tenancy, RLS, token auth | next |
-| 3 | Read API | |
+| 2 | Tenancy, RLS, token auth | ✅ done |
+| 3 | Read API | next |
 | 4 | Embed surface, renderer adapters | |
 | 5 | ICS feed out | |
 | 6 | Write path (non-recurring events only) | |

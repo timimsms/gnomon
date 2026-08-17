@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1786807087827,
+      "when": 1786899931947,
       "tag": "0000_initial_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786899932645,
+      "tag": "0001_rls_policies",
       "breakpoints": true
     }
   ]

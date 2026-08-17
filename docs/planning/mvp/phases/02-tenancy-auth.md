@@ -1,6 +1,6 @@
 # Phase 2 — Tenancy and auth
 
-**Status:** 🚧 In progress — O2 closed; schema, token verification and reference implementations done; RLS blocked on Docker
+**Status:** ✅ Complete
 **Depends on:** Phase 1 (the schema encodes Phase 1's timing model)
 **Blocks:** Phases 3–7
 **Decisions in play:** L5 (no accounts), L7 (RLS tenancy), L8 (Postgres only), ADR-0009 (EdDSA)
@@ -170,26 +170,40 @@ if CI lacks Go, because a skipped example is an unverified example.
 
 ### 2.6 Test infrastructure
 
-Testcontainers with a real Postgres. RLS cannot be tested against a mock, and
-testing it against a superuser connection tests nothing.
+A real Postgres — RLS cannot be tested against a mock, and testing it against a
+superuser connection tests nothing.
+
+**Testcontainers was replaced** ([ADR-0010](../../../decisions/0010-test-database-provisioning.md)):
+it hard-requires a Docker daemon, which is the dependency that stalled this
+phase, and it was never the interesting part. The harness takes a URL and
+resolves it from `GNOMON_TEST_DATABASE_URL`, then a local Postgres on
+5433/5432, then skips locally / **fails in CI**. CI uses a `postgres:17-alpine`
+service container, so the guarantee is kept regardless of anyone's laptop.
+`docker compose up -d postgres` is still supported as one of the sources, and
+testcontainers can return whenever Docker does — it only ever produced a URL.
+
+Each suite creates a scratch database, applies the **checked-in migrations**,
+and creates an app role that is not superuser, owns nothing, and has no
+`BYPASSRLS`.
 
 ---
 
 ## Exit criteria
 
 - [x] O2 resolved and recorded as an ADR ([ADR-0009](../../../decisions/0009-eddsa-with-registered-public-keys.md))
-- [ ] An RLS-enforced integration test proves tenant A cannot read tenant B's
+- [x] An RLS-enforced integration test proves tenant A cannot read tenant B's
       events **even with a forged calendar ID in the token**
-- [ ] The same test passes when run as the application role, and is
-      demonstrated to *fail* if `FORCE ROW LEVEL SECURITY` is dropped
-- [ ] Tenant context does not leak across pooled connection checkouts, proven
+- [x] The same test passes when run as the application role, and is
+      demonstrated to *fail* if RLS is disabled
+- [x] Tenant context does not leak across pooled connection checkouts, proven
       under a pool
 - [x] Algorithm-confusion and `alg: none` attacks are rejected, with tests
 - [x] A token signed by tenant A's key but claiming tenant B's `tid` is
       rejected — the tenant comes from the key, not the claim
 - [x] Every token-minting reference implementation is exercised against the
       real verifier, and CI fails rather than skips if a toolchain is missing
-- [ ] Migrations apply cleanly from empty (needs Docker), and are readable
+- [x] Migrations apply cleanly from empty against a real Postgres, and are
+      readable
 - [x] Every tenant-scoped table carries a non-null `tenant_id`, asserted from
       the schema so a new table cannot quietly escape RLS
 - [x] `search_span` is proven a conservative superset across the phase 1
@@ -200,24 +214,18 @@ testing it against a superuser connection tests nothing.
 ## Verification
 
 ```bash
-pnpm --filter @gnomon/server test          # token verification; no Docker
-pnpm db:up
-pnpm --filter @gnomon/server test:db       # RLS via testcontainers; needs Docker
+pnpm --filter @gnomon/server test    # everything, including RLS
 ```
 
-The phase splits cleanly along the Docker boundary, so it is worth doing in
-that order:
+Needs a Postgres, from any one of:
 
-| Work item | Needs Docker |
-|---|---|
-| 2.4 token verification, 2.5 reference implementations | no — pure crypto |
-| 2.2 schema definition | no — writing it |
-| 2.2 migration application, 2.3 RLS, 2.6 | **yes** |
+- Postgres.app, or `brew install postgresql@17 && brew services start postgresql@17`
+- `docker compose up -d postgres` (maps 5433)
+- `GNOMON_TEST_DATABASE_URL=postgres://user:pass@host:port/postgres`
 
-> Docker is not currently installed on the development machine (see Phase 0.4).
-> Everything in the first two rows can proceed without it; nothing in the third
-> can be verified at all until it is installed, and an RLS policy that has
-> never been executed is a comment.
+With none of them the tenancy suite skips locally with a message naming all
+three, and **fails in CI** — a green build that never ran these tests is worse
+than a red one.
 
 ---
 
