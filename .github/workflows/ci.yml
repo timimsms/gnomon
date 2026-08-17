@@ -75,6 +75,13 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # The adapter conformance suite runs in a real browser: both renderers
+      # measure layout, and a DOM that does not lay out would let an adapter
+      # pass while drawing nothing. Chromium only -- the suite proves the
+      # RENDERER seam, not browser compatibility, which is phase 4.8's job.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @gnomon/embed exec playwright install --with-deps chromium
+
       # Includes scripts/check-licenses.test.mjs, which proves the gate above
       # rejects AGPL/GPL and fails closed on unknown licences. A gate never
       # observed to reject anything is not a gate.
