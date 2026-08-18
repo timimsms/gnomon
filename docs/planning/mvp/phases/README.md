@@ -33,8 +33,8 @@ there is still nothing to look at. That is the intended shape:
 | [0](00-foundation.md) | Foundation, license gate, CI | S | Low | ✅ done |
 | [1](01-core-domain.md) | Core domain, recurrence, conformance corpus | L | **High** | ✅ done |
 | [2](02-tenancy-auth.md) | Drizzle schema, RLS, JWT verification | M | **High** | ✅ done |
-| [3](03-read-api.md) | Read API, ETag, OpenAPI | S | Low | ⬜ next |
-| [4](04-embed-surface.md) | Renderer adapter, Lit component, loader | L | Medium | ⬜ |
+| [3](03-read-api.md) | Read API, ETag, OpenAPI | S | Low | ✅ done |
+| [4](04-embed-surface.md) | Renderer adapter, Lit component, loader | L | Medium | ⬜ next |
 | [5](05-ics-feed-out.md) | Tokened ICS feeds | S | Low | ⬜ |
 | [6](06-write-path.md) | Write path, non-recurring only | M | Low | ⬜ |
 | [7](07-ics-in-polish.md) | ICS ingest, a11y, docs, v0.1.0 | L | Medium | ⬜ |

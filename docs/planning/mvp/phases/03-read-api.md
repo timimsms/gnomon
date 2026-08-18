@@ -1,6 +1,6 @@
 # Phase 3 — Read API
 
-**Status:** ⬜
+**Status:** ✅ Complete
 **Depends on:** Phases 1 and 2
 **Blocks:** Phases 4, 5
 **Decisions in play:** L4 (read-mostly), O4 (expand on read)
@@ -69,13 +69,13 @@ embed has data on day one.
 
 ## Exit criteria
 
-- [ ] Curl-able API against the demo tenant, with a token minted by the
+- [x] Curl-able API against the demo tenant, with a token minted by the
       reference implementation
-- [ ] Over-wide window returns 400 naming the cap
-- [ ] `If-None-Match` returns 304, and the ETag varies by tenant — proven by a
+- [x] Over-wide window returns 400 naming the cap
+- [x] `If-None-Match` returns 304, and the ETag varies by tenant — proven by a
       test that two tenants with identical query parameters get different ETags
-- [ ] OpenAPI spec generated from Zod and served
-- [ ] Expansion results match the Phase 1 corpus when fetched over HTTP —
+- [x] OpenAPI spec generated from Zod and served
+- [x] Expansion results match the Phase 1 corpus when fetched over HTTP —
       the API must not re-implement or post-process expansion
 
 ---
@@ -87,6 +87,28 @@ docker compose up -d
 curl -H "Authorization: Bearer $(node scripts/mint-demo-token.mjs)" \
   'http://localhost:3000/events?from=2026-03-01&to=2026-03-31&tz=America/New_York'
 ```
+
+---
+
+## Two defects this phase surfaced
+
+Both were found by making the API query through the index and compare against
+the corpus, rather than by reasoning about the code.
+
+**`pg` returns `date` and `timestamp` columns as JS `Date` objects.** For this
+schema that is a correctness bug, not a typing inconvenience: a `date` holds a
+*floating* date (ADR-0005), so constructing a `Date` from it anchors it to the
+server's timezone and a holiday stored as 2026-10-03 renders on 2026-10-02
+anywhere west of Greenwich. The same hazard the ICS parser hit, arriving from
+the other direction. Type parsers for OIDs 1082 and 1114 are registered in
+`db/client.ts`; removing them turns 30 tests red.
+
+**A zero-duration event produced an EMPTY `tstzrange`.** `[t,t)` overlaps
+nothing in Postgres, so the GiST pre-filter silently dropped the event and it
+was missing from every query with no error anywhere. The span is now widened
+to a millisecond when it would be empty — always safe, since it need only be a
+superset. Phase 1's zero-length fixture is what exposed it, once there was an
+index for it to be filtered by.
 
 ---
 
