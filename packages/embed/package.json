@@ -10,7 +10,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./adapters/event-calendar": "./src/adapters/event-calendar.ts",
-    "./adapters/fullcalendar": "./src/adapters/fullcalendar.ts"
+    "./adapters/fullcalendar": "./src/adapters/fullcalendar.ts",
+    "./component": "./src/component.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -28,6 +29,7 @@
     "@fullcalendar/daygrid": "6.1.21",
     "@fullcalendar/interaction": "6.1.21",
     "@fullcalendar/list": "6.1.21",
-    "@gnomon/core": "workspace:*"
+    "@gnomon/core": "workspace:*",
+    "lit": "^3.3.3"
   }
 }
