@@ -1,6 +1,6 @@
 # Phase 4 — Embed surface
 
-**Status:** ⬜
+**Status:** 🚧 In progress — adapter seam and both implementations done
 **Depends on:** Phase 3
 **Blocks:** Phase 7 (accessibility, docs)
 **Decisions in play:** L3 (renderer behind adapter), ADR-0003
@@ -50,6 +50,21 @@ the moment we most need to switch.
 
 It produces no user-visible feature and it is not optional.
 
+**It earned its place immediately.** Four differences surfaced while writing
+it, each of which the interface would otherwise have quietly inherited from
+whichever renderer was written first:
+
+| Difference | Consequence for the interface |
+|---|---|
+| One draws on construction; the other needs an explicit `render()` | `mount()` means "on screen" for both — the adapter absorbs it |
+| One `destroy()` is synchronous and throws on a second call; the other returns a promise | The interface promises idempotent synchronous teardown; a `disconnectedCallback` has nowhere to put a rejected promise |
+| One re-measures its container automatically; the other must be told | This is why `refresh()` exists. With one implementation it looked like a redundant method |
+| `dateClick` is core in one, a separate plugin in the other | The event is promised either way; the adapter pays the cost |
+
+Pinned to the **6.x** line: 7.x has a stable `core`, but its `daygrid` and
+`list` plugins are still release candidates, and mixing majors is unsupported.
+Standard packages only — Premium moved to AGPLv3 in v7 and must never appear.
+
 ### 4.4 Lit web component
 
 Month and agenda/list views only. Shadow DOM by default — this is the primary
@@ -94,9 +109,11 @@ Against `apps/demo-portal`. Must include, as distinct scenarios:
 
 - [ ] Pasting one `<script>` tag into `demo-portal` yields a themed, working
       calendar under strict CSP
-- [ ] Both adapters pass the same adapter conformance suite
-- [ ] Swapping the adapter requires **no change** outside the adapter module —
-      demonstrated, not asserted
+- [x] Both adapters pass the same adapter conformance suite — 25 tests, one
+      suite, parameterised only by adapter name
+- [x] Swapping the adapter requires **no change** outside the adapter module —
+      the suite never imports a renderer and never branches on which is loaded,
+      which is the demonstration
 - [ ] Loader is under 2KB gzipped, with the measurement in CI
 - [ ] Every hostile-host scenario in 4.8 is green
 - [ ] Two embeds on one page do not interfere

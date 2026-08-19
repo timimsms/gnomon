@@ -1,8 +1,33 @@
 {
   "name": "@gnomon/embed",
   "version": "0.0.0",
-  "description": "Lit web component and renderer adapter. Phase 4.",
+  "description": "Lit web component and renderer adapter.",
   "license": "MIT",
   "type": "module",
-  "private": true
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./adapters/event-calendar": "./src/adapters/event-calendar.ts",
+    "./adapters/fullcalendar": "./src/adapters/fullcalendar.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "typescript": "^5.7.2",
+    "vite": "^7"
+  },
+  "dependencies": {
+    "@event-calendar/core": "^5",
+    "@fullcalendar/core": "6.1.21",
+    "@fullcalendar/daygrid": "6.1.21",
+    "@fullcalendar/interaction": "6.1.21",
+    "@fullcalendar/list": "6.1.21",
+    "@gnomon/core": "workspace:*"
+  }
 }
