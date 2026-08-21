@@ -136,6 +136,47 @@ export function toRendererTiming(occurrence: EventOccurrence): {
     : { start: occurrence.timing.start, end: occurrence.timing.end, allDay: false };
 }
 
+/**
+ * Puts a renderer's stylesheet where the renderer actually rendered.
+ *
+ * THIS IS NOT OPTIONAL POLISH. A stylesheet in `document.head` does not apply
+ * inside a shadow root -- style encapsulation cuts both ways -- so a renderer
+ * that injects its CSS the usual way draws a completely unstyled calendar
+ * once we mount it in shadow DOM. It still emits correct markup and correct
+ * text, which is exactly why a test asserting on text content passes while
+ * the grid is visibly broken.
+ *
+ * `adoptedStyleSheets` rather than a <style> element, because it is not
+ * subject to `style-src` and therefore survives a host CSP that forbids
+ * inline styles -- which is the case phase 4.8 exists to cover. Falls back to
+ * a <style> element where constructable stylesheets are unavailable.
+ *
+ * Kept behind the seam: each adapter knows its own CSS, so the interface does
+ * not have to grow a `styles` member that every future renderer must answer.
+ */
+const adopted = new WeakMap<ShadowRoot | Document, Set<string>>();
+
+export function adoptStyles(host: HTMLElement, css: string, key: string): void {
+  const root = host.getRootNode();
+  if (!(root instanceof ShadowRoot)) return; // already in the document
+
+  const seen = adopted.get(root) ?? new Set<string>();
+  if (seen.has(key)) return;
+  seen.add(key);
+  adopted.set(root, seen);
+
+  try {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+  } catch {
+    const style = document.createElement('style');
+    style.textContent = css;
+    root.append(style);
+  }
+}
+
+
 /** Stable identity for an occurrence, since recurring instances share an eventId. */
 export function occurrenceKey(occurrence: EventOccurrence): string {
   return occurrence.recurrenceId

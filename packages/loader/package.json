@@ -1,8 +1,18 @@
 {
   "name": "@gnomon/loader",
   "version": "0.0.0",
-  "description": "The <script> tag payload. Phase 4.",
+  "description": "The <script> tag payload.",
   "license": "MIT",
   "type": "module",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "size": "node scripts/check-size.mjs",
+    "test": "pnpm build && pnpm size"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^7"
+  }
 }

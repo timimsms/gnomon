@@ -245,3 +245,43 @@ test('the suite actually covers more than one implementation', () => {
   // this failure is the reminder.
   expect(ADAPTERS.length).toBeGreaterThanOrEqual(2);
 });
+
+for (const adapter of ADAPTERS) {
+  test(`renderer stylesheet reaches the shadow root: ${adapter}`, async ({ page }) => {
+    // A stylesheet in document.head does NOT apply inside a shadow root, so a
+    // renderer that injects its CSS the usual way draws an unstyled grid --
+    // while still emitting correct markup and correct TEXT. Every
+    // text-based assertion above passes in that state, which is why this
+    // check exists separately and asserts on computed layout.
+    await page.goto('/');
+    await page.waitForFunction(() => Boolean(window.gnomonHarness));
+    await page.evaluate(
+      ([name, options]) => {
+        const host = document.querySelector('#host')!;
+        // Mount inside a shadow root, as the component does.
+        const shadow = host.attachShadow({ mode: 'open' });
+        const inner = document.createElement('div');
+        inner.style.height = '600px';
+        shadow.append(inner);
+        (window as never as { __inner: HTMLElement }).__inner = inner;
+        window.gnomonHarness.create(name as string);
+        window.gnomonHarness.mountInto(inner, options as never);
+      },
+      [adapter, MOUNT] as const,
+    );
+
+    const styled = await page.evaluate(() => {
+      const shadow = document.querySelector('#host')!.shadowRoot!;
+      const grid = shadow.querySelector('.ec, .fc') as HTMLElement | null;
+      return {
+        sheets: shadow.adoptedStyleSheets.length + shadow.querySelectorAll('style').length,
+        display: grid ? getComputedStyle(grid).display : 'NONE',
+      };
+    });
+
+    expect(styled.sheets).toBeGreaterThan(0);
+    // Both renderers lay their root out as flex. Unstyled, it would be the
+    // UA default `block`.
+    expect(styled.display).toBe('flex');
+  });
+}

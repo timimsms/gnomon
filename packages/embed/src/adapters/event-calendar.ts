@@ -1,7 +1,12 @@
 import { DayGrid, List, createCalendar, destroyCalendar } from '@event-calendar/core';
+// `?inline` yields the CSS as text rather than injecting it into the
+// document, which is what lets us put it inside the shadow root where the
+// calendar is actually drawn.
+import rendererCss from '@event-calendar/core/index.css?inline';
 import type { EventOccurrence } from '@gnomon/core';
 import {
   EventBus,
+  adoptStyles,
   occurrenceKey,
   toRendererTiming,
   type MountOptions,
@@ -51,6 +56,13 @@ class EventCalendarAdapter implements RendererAdapter {
   mount(host: HTMLElement, options: MountOptions): void {
     if (this.#calendar) throw new Error('Adapter already mounted; call destroy() first.');
     this.#view = options.view;
+
+    // This renderer ships a CSS file and expects the DOCUMENT to include it.
+    // A document stylesheet does not apply inside a shadow root, so without
+    // this the grid renders with correct markup, correct text, and no layout
+    // at all -- which every text-based assertion happily passes. FullCalendar
+    // injects into getRootNode() and needs no equivalent.
+    adoptStyles(host, rendererCss, 'event-calendar');
 
     this.#calendar = createCalendar(host, [DayGrid, List], {
       view: VIEWS[options.view],

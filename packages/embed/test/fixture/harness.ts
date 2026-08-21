@@ -29,6 +29,8 @@ interface Harness {
    */
   create(name: string): void;
   mountCreated(options: MountOptions): void;
+  /** Mounts into an arbitrary element, so a test can supply a shadow root. */
+  mountInto(element: HTMLElement, options: MountOptions): void;
   mount(name: string, options: MountOptions): void;
   destroy(): void;
   release(): void;
@@ -73,6 +75,11 @@ const harness: Harness = {
     const host = document.querySelector<HTMLElement>('#host');
     if (!host) throw new Error('No #host element');
     adapter.mount(host, options);
+  },
+
+  mountInto(element, options) {
+    if (!adapter) throw new Error('No adapter created');
+    adapter.mount(element, options);
   },
 
   mount(adapterName, options) {

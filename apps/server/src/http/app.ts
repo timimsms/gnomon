@@ -14,6 +14,8 @@ import type { KeyRegistry, VerifyOptions } from '../auth/tokens.js';
 import { permits } from '../auth/tokens.js';
 import type { Database } from '../db/client.js';
 import { fromEventRow, type EventRow } from '../db/events.js';
+import { cors } from './cors.js';
+import { registerEmbedRoutes } from './embed.js';
 import { TENANT_CACHE_HEADERS, computeETag, matchesIfNoneMatch } from './etag.js';
 import {
   CalendarIdParamSchema,
@@ -51,6 +53,10 @@ export function createApp(options: AppOptions) {
     },
   });
 
+  // First, and on everything: a preflight must be answered before auth runs,
+  // or the browser never sends the real request and the 401 is invisible.
+  app.use('*', cors());
+
   app.get('/health', (c) => c.json({ status: 'ok' }));
 
   // A stack trace in a response body is an information leak, and Hono's
@@ -59,6 +65,11 @@ export function createApp(options: AppOptions) {
     console.error('[gnomon] unhandled error', error);
     return c.json({ error: 'internal_error' }, 500);
   });
+
+  // Registered BEFORE the auth middleware: these serve the same public bytes
+  // to everyone and carry no tenant data, and requiring a token to fetch the
+  // loader would be a chicken-and-egg -- the loader is what obtains one.
+  registerEmbedRoutes(app);
 
   app.use('/calendars', requireToken(options.registry, options.verify ?? {}));
   app.use('/calendars/*', requireToken(options.registry, options.verify ?? {}));

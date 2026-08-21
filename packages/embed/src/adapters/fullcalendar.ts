@@ -87,6 +87,13 @@ class FullCalendarAdapter implements RendererAdapter {
     // stays "mount() means it is on screen"; hiding the difference is the
     // adapter's job, which is exactly what an adapter is for.
     this.#calendar.render();
+
+    // SEAM FINDING 5: this renderer injects its stylesheet into the element's
+    // getRootNode(), so it styles itself correctly inside a shadow root with
+    // no help. The other ships a CSS file and expects the DOCUMENT to include
+    // it, which silently draws an unstyled grid once we mount in shadow DOM --
+    // see adoptStyles in the other adapter. Deliberately NOT calling
+    // adoptStyles here: duplicating the sheet would double-apply every rule.
   }
 
   destroy(): void {
