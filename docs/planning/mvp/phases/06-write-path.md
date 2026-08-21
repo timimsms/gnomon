@@ -1,6 +1,6 @@
 # Phase 6 — Write path
 
-**Status:** ⬜
+**Status:** ✅ Complete
 **Depends on:** Phases 2, 3
 **Decisions in play:** L4 (non-recurring writes only)
 
@@ -65,14 +65,14 @@ against the event's ETag/version, `409` on mismatch.
 
 ## Exit criteria
 
-- [ ] A scoped token creates an event; an unscoped one gets 403, proven by test
-- [ ] A token scoped to calendar A cannot write to calendar B in the same
+- [x] A scoped token creates an event; an unscoped one gets 403, proven by test
+- [x] A token scoped to calendar A cannot write to calendar B in the same
       tenant, proven by test
-- [ ] Writing an event with an `RRULE` returns a specific, documented 4xx
-- [ ] Every mutation appears in the audit log; the application role cannot
+- [x] Writing an event with an `RRULE` returns a specific, documented 4xx
+- [x] Every mutation appears in the audit log; the application role cannot
       `UPDATE` or `DELETE` audit rows
-- [ ] Concurrent conflicting updates produce 409, not a lost write
-- [ ] Written events round-trip through the Phase 5 ICS feed unchanged
+- [x] Concurrent conflicting updates produce 409, not a lost write
+- [x] Written events round-trip through the Phase 5 ICS feed unchanged
 
 ---
 
@@ -81,6 +81,36 @@ against the event's ETag/version, `409` on mismatch.
 ```bash
 pnpm --filter @gnomon/server test
 ```
+
+---
+
+## Notes from building it
+
+**Concurrency needed a column, not a timestamp.** `updated_at` defaults to
+`now()`, which inside a transaction is the *transaction start* time — so two
+concurrent updates beginning in the same instant carry identical timestamps,
+and an `If-Match` built on that lets one overwrite the other while both
+believe they hold the current version. A monotonic `version` has no such tie.
+`xmin` was the other candidate and was rejected: it wraps around, is not
+portable, and would put a Postgres system column in our public API.
+
+`SELECT ... FOR UPDATE` matters as much as the comparison. Without the lock,
+two writers can both read version 3, both find `If-Match` satisfied, and both
+write version 4 — which is precisely the lost update the endpoint exists to
+prevent.
+
+**Deletions are audited before the row is gone.** Afterwards there is nothing
+left to record, and an audit log that omits deletions is worse than none.
+
+**Append-only is a GRANT, not a convention.** The application role holds
+`SELECT, INSERT` on `audit_log` and nothing else, so a compromised application
+cannot rewrite its own history whatever the code says. The test asserts
+`permission denied` rather than trusting the absence of a code path.
+
+All three controls were verified by removing them: dropping the per-calendar
+scope check lets a token write to a calendar it was never granted, dropping
+the `If-Match` comparison loses a write silently, and skipping the audit
+insert leaves a mutation unrecorded.
 
 ---
 

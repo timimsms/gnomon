@@ -17,6 +17,7 @@ import { fromEventRow, type EventRow } from '../db/events.js';
 import { cors } from './cors.js';
 import { registerEmbedRoutes } from './embed.js';
 import { registerFeedRoutes } from './feeds.js';
+import { registerWriteRoutes } from './writes.js';
 import { TENANT_CACHE_HEADERS, computeETag, matchesIfNoneMatch } from './etag.js';
 import {
   CalendarIdParamSchema,
@@ -79,10 +80,15 @@ export function createApp(options: AppOptions) {
   app.use('/calendars', requireToken(options.registry, options.verify ?? {}));
   app.use('/calendars/*', requireToken(options.registry, options.verify ?? {}));
   app.use('/events', requireToken(options.registry, options.verify ?? {}));
+  app.use('/events/*', requireToken(options.registry, options.verify ?? {}));
 
   registerListCalendars(app, options);
   registerGetCalendar(app, options);
   registerListEvents(app, options);
+
+  // After the auth middleware above: every write requires a verified token,
+  // and the scope check inside needs the token it produced.
+  registerWriteRoutes(app, options.db);
 
   app.doc('/openapi.json', {
     openapi: '3.1.0',

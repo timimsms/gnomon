@@ -73,9 +73,9 @@ Phase specifications, with exit criteria, live in
 | 2 | Tenancy, RLS, token auth | ✅ done |
 | 3 | Read API | ✅ done |
 | 4 | Embed surface, renderer adapters | ✅ done |
-| 5 | ICS feed out | next |
-| 6 | Write path (non-recurring events only) | |
-| 7 | ICS in, accessibility, docs | |
+| 5 | ICS feed out | ✅ built; 3-client check manual |
+| 6 | Write path (non-recurring events only) | ✅ done |
+| 7 | ICS in, accessibility, docs | next |
 
 ## License
 
