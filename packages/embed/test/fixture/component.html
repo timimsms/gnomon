@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gnomon component harness</title>
+    <style>
+      /* A deliberately hostile host stylesheet. Everything here must lose to
+         the Shadow DOM boundary. */
+      * { font-family: "Comic Sans MS" !important; color: #ff0000 !important; }
+      div { border: 6px dashed #ff00ff !important; padding: 40px !important; }
+      button { background: #ff0000 !important; text-transform: uppercase !important; }
+    </style>
+  </head>
+  <body>
+    <div id="wrapper"></div>
+    <script type="module" src="./component-entry.ts"></script>
+  </body>
+</html>

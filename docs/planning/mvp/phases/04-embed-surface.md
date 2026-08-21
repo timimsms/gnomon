@@ -1,6 +1,6 @@
 # Phase 4 — Embed surface
 
-**Status:** 🚧 In progress — adapter seam and both implementations done
+**Status:** 🚧 In progress — adapter seam, both implementations, and the Lit component done
 **Depends on:** Phase 3
 **Blocks:** Phase 7 (accessibility, docs)
 **Decisions in play:** L3 (renderer behind adapter), ADR-0003
@@ -68,7 +68,34 @@ Standard packages only — Premium moved to AGPLv3 in v7 and must never appear.
 ### 4.4 Lit web component
 
 Month and agenda/list views only. Shadow DOM by default — this is the primary
-defence against host CSS.
+defence against host CSS, and it is **narrower than it looks**; see below.
+
+The element owns the chrome (navigation, view switching, loading/error
+states), with both renderers' own toolbars suppressed, so swapping the
+renderer does not change what the user sees.
+
+**Shadow DOM does not stop inherited properties.** The hostile-host fixture
+applies `* { font-family: … !important }`, which matches the
+`<gnomon-calendar>` element *itself* — and every node in the shadow tree then
+inherits that computed value. Nothing crosses the boundary and nothing
+"leaks", but the result is indistinguishable from a leak. The fix is to
+restate inherited properties (`font-family`, `color`, `text-transform`,
+`letter-spacing`, `line-height`, …) on a wrapper *inside* the shadow root: a
+declaration there beats an inherited value regardless of `!important` outside,
+because inheritance carries no specificity. Removing that block turns the test
+red.
+
+**`useDefineForClassFields: false` is load-bearing in this package.** At
+ES2022+ the default is `true`, and native class fields then overwrite the
+accessors Lit installs for reactive properties — the element renders once,
+empty, and never updates. Lit detects it and warns, but only at runtime in dev
+mode; typecheck and build are both perfectly happy. This cost an hour and
+would have shipped silently.
+
+**The token provider outlives the client.** Folding it into the client meant
+every attribute change — including the initial ones — discarded the cached
+token and minted a fresh one against the host's endpoint. Now it is rebuilt
+only when the token *source* changes.
 
 ### 4.5 Loader script
 
