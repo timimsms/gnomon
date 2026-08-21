@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { generateKeyPairSync } from 'node:crypto';
+import { mintFeedToken } from './feeds/tokens.js';
 import { Pool } from 'pg';
 import { toEventRow } from './db/events.js';
 import type { CalendarEvent, CalendarId, EventId, TenantId } from '@gnomon/core';
@@ -35,6 +36,7 @@ async function main() {
 
   let maintenance = '';
   let holidays = '';
+  let feedToken = '';
 
   await pool.query('BEGIN');
   try {
@@ -95,6 +97,17 @@ async function main() {
       timing: { kind: 'allDay', startDate: '2026-07-04', endDate: '2026-07-05' },
     });
 
+    // A subscribable feed for the maintenance calendar, so the demo can be
+    // added to a real calendar client without any further setup.
+    await pool.query('DELETE FROM feed_tokens WHERE tenant_id = $1', [DEMO_TENANT]);
+    const feed = mintFeedToken();
+    await pool.query(
+      `INSERT INTO feed_tokens (tenant_id, calendar_id, token_hash, label)
+       VALUES ($1, $2, $3, 'demo subscription')`,
+      [DEMO_TENANT, maintenance, feed.hash],
+    );
+    feedToken = feed.token;
+
     await pool.query('COMMIT');
   } catch (error) {
     await pool.query('ROLLBACK');
@@ -116,6 +129,10 @@ async function main() {
   console.log(
     `    'http://localhost:3000/events?from=2026-03-01T00:00:00Z&to=2026-04-01T00:00:00Z&tz=America/New_York'`,
   );
+  console.log('');
+  console.log('Subscribe from a calendar client (the token is shown once):');
+  console.log('');
+  console.log(`  webcal://localhost:3000/feeds/${feedToken}.ics`);
 }
 
 async function upsertCalendar(name: string, timeZone: string): Promise<string> {

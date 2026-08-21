@@ -244,3 +244,28 @@ describe('search_span bounds', () => {
     expect(computeSearchSpan(allDay)).toBe(computeSearchSpan({ ...allDay }));
   });
 });
+
+describe('row values are normalised at the boundary', () => {
+  it('converts Postgres\' space separator to ISO T', () => {
+    // Postgres renders `timestamp` as "2026-03-01 09:00:00". Temporal accepts
+    // the space, so every expanding code path normalised it invisibly -- and
+    // the ICS feed, which serialises stored values WITHOUT expanding, emitted
+    // "20260301 09:00:00T000000". Fixed at the boundary so the domain type
+    // means what it says everywhere.
+    const row = toEventRow(event());
+    const restored = fromEventRow({ ...row, startLocal: '2026-06-01 09:00:00', endLocal: '2026-06-01 09:15:00' });
+
+    expect(restored.timing).toEqual({
+      kind: 'timed',
+      start: '2026-06-01T09:00:00',
+      end: '2026-06-01T09:15:00',
+      timeZone: 'America/New_York',
+    });
+  });
+
+  it('leaves an already-ISO value alone', () => {
+    const row = toEventRow(event());
+    const restored = fromEventRow({ ...row, startLocal: '2026-06-01T09:00:00' });
+    expect(restored.timing.kind === 'timed' && restored.timing.start).toBe('2026-06-01T09:00:00');
+  });
+});

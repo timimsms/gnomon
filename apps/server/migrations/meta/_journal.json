@@ -15,6 +15,13 @@
       "when": 1786899932645,
       "tag": "0001_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787301370948,
+      "tag": "0002_feed_token_resolution",
+      "breakpoints": true
     }
   ]
 }

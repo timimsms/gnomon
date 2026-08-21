@@ -1,6 +1,6 @@
 # Phase 5 — ICS feed out
 
-**Status:** ⬜
+**Status:** 🚧 Built and tested; the three-client verification is manual and outstanding
 **Depends on:** Phases 1, 2, 3
 **Decisions in play:** L10 (feed is a deliverable, not a stretch goal)
 
@@ -67,12 +67,13 @@ where it ends.
 
 - [ ] Subscribing from **Google Calendar, Apple Calendar, and Outlook** renders
       correctly, **including recurrences** — all three, tested by hand
-- [ ] Recurring events appear as `RRULE`s, not as expanded instances, so
+- [x] Recurring events appear as `RRULE`s, not as expanded instances, so
       clients apply their own expansion and the feed stays small
-- [ ] Conditional requests return 304
-- [ ] Revoking a token stops the feed on the next poll
-- [ ] A leaked feed URL grants access to one calendar and nothing else
-- [ ] Feed output validates against an external ICS validator
+- [x] Conditional requests return 304 — verified by hand at 0 bytes vs 1296
+- [x] Revoking a token stops the feed on the next poll
+- [x] A leaked feed URL grants access to one calendar and nothing else
+- [~] Feed output round-trips through an INDEPENDENT parser (`node-ical`,
+      not our serialiser). The external online validator remains manual.
 
 ---
 
@@ -81,6 +82,37 @@ where it ends.
 Manual subscription from all three clients is a required part of the exit —
 these clients disagree in practice and none of the disagreements show up in a
 unit test. Record what was tested and on which client versions.
+
+---
+
+## Two findings
+
+**`feed_tokens` is under RLS, and the feed request has no tenant.** The same
+chicken-and-egg as `tenant_keys`: the policy reads `gnomon.tenant_id`, which
+is precisely what the token lookup is trying to discover, so a plain `SELECT`
+matches zero rows and every feed 404s. Unlike `tenant_keys` — excluded from
+RLS entirely — this one gets a narrow `SECURITY DEFINER` function that takes a
+token *hash* and returns only its tenant and calendar. The table keeps its
+policy for listing, creating and revoking. Removing the function turns 15
+tests red.
+
+**Postgres renders `timestamp` with a SPACE, not a `T`.** `2026-03-01
+09:00:00`, not ISO. Temporal accepts the space, so every path that *expands*
+an event normalised it invisibly and nothing noticed for three phases. The
+feed is the first path that serialises a **stored** value without expanding
+it, and there `compactDateTime` split on `T`, found none, and emitted
+`20260301 09:00:00T000000` — which no calendar client can read. Normalised at
+the row boundary so the domain type means what it says everywhere.
+
+---
+
+## Still to do, and it needs a human
+
+The exit criteria require subscribing from **Google Calendar, Apple Calendar
+and Outlook** and confirming all three render correctly including recurrences.
+These clients disagree in practice and none of the disagreements show up in a
+unit test, which is exactly why the criterion is written that way. `pnpm
+db:seed` prints a `webcal://` URL for this purpose.
 
 ---
 

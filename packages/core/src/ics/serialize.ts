@@ -17,6 +17,12 @@ export interface SerializeInput {
   events: readonly CalendarEvent[];
   /** X-WR-CALNAME. Calendar clients show this as the subscription's name. */
   name?: string;
+  /**
+   * X-WR-TIMEZONE. Non-standard, and honoured by Google, Apple and Outlook
+   * alike as the calendar's default zone -- which is why a feed sets it even
+   * though RFC 5545 does not define it.
+   */
+  timeZone?: string;
   /** Defaults to a Gnomon identifier. */
   productId?: string;
 }
@@ -37,6 +43,9 @@ export function serializeCalendar(input: SerializeInput): string {
 
   if (input.name !== undefined) {
     lines.push(`X-WR-CALNAME:${escapeText(input.name)}`);
+  }
+  if (input.timeZone !== undefined) {
+    lines.push(`X-WR-TIMEZONE:${escapeText(input.timeZone)}`);
   }
 
   for (const zone of referencedZones(input.events)) {
