@@ -16,6 +16,7 @@ import type { Database } from '../db/client.js';
 import { fromEventRow, type EventRow } from '../db/events.js';
 import { cors } from './cors.js';
 import { registerEmbedRoutes } from './embed.js';
+import { registerFeedRoutes } from './feeds.js';
 import { TENANT_CACHE_HEADERS, computeETag, matchesIfNoneMatch } from './etag.js';
 import {
   CalendarIdParamSchema,
@@ -70,6 +71,10 @@ export function createApp(options: AppOptions) {
   // to everyone and carry no tenant data, and requiring a token to fetch the
   // loader would be a chicken-and-egg -- the loader is what obtains one.
   registerEmbedRoutes(app);
+
+  // Also before the auth middleware: a feed's only credential is the opaque
+  // token in its URL, because a calendar client cannot present a JWT.
+  registerFeedRoutes(app, options.db);
 
   app.use('/calendars', requireToken(options.registry, options.verify ?? {}));
   app.use('/calendars/*', requireToken(options.registry, options.verify ?? {}));

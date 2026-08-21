@@ -84,8 +84,8 @@ export function fromEventRow(row: EventRow): CalendarEvent {
       ? { kind: 'allDay', startDate: expectDate(row.startDate), endDate: expectDate(row.endDate) }
       : {
           kind: 'timed',
-          start: expectString(row.startLocal, 'start_local'),
-          end: expectString(row.endLocal, 'end_local'),
+          start: toIsoLocal(expectString(row.startLocal, 'start_local')),
+          end: toIsoLocal(expectString(row.endLocal, 'end_local')),
           timeZone: expectString(row.timeZone, 'time_zone'),
         };
 
@@ -227,6 +227,25 @@ function expectString(value: string | null, column: string): string {
     throw new Error(`events.${column} is null on a timed event; the row violates its CHECK constraint`);
   }
   return value;
+}
+
+/**
+ * Postgres renders `timestamp` as `2026-03-01 09:00:00` -- a SPACE separator,
+ * not the `T` that ISO 8601 and RFC 5545 use.
+ *
+ * Temporal happily accepts the space, so every code path that expands an
+ * event normalised it invisibly and nothing noticed. The ICS feed is the
+ * first path that serialises a STORED value without expanding it first, and
+ * there `compactDateTime` split on `T`, found none, and emitted
+ * `20260301 09:00:00T000000` -- which no calendar client can read.
+ *
+ * Normalised here, at the boundary, so `EventTiming.start` means what its
+ * type says everywhere rather than being conditionally ISO.
+ */
+function toIsoLocal(value: string): string {
+  // Also drops a trailing zone marker: these columns are `timestamp WITHOUT
+  // time zone`, so anything Postgres appends would be meaningless here.
+  return value.replace(' ', 'T').replace(/(?:Z|[+-]\d{2}(?::?\d{2})?)$/, '');
 }
 
 function expectDate(value: string | null): string {
