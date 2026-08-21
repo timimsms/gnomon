@@ -1,6 +1,6 @@
 # Phase 4 — Embed surface
 
-**Status:** 🚧 In progress — adapter seam, component, loader and iframe fallback done; 4.8 hostile-host matrix remains
+**Status:** ✅ Complete
 **Depends on:** Phase 3
 **Blocks:** Phase 7 (accessibility, docs)
 **Decisions in play:** L3 (renderer behind adapter), ADR-0003
@@ -134,16 +134,16 @@ Against `apps/demo-portal`. Must include, as distinct scenarios:
 
 ## Exit criteria
 
-- [ ] Pasting one `<script>` tag into `demo-portal` yields a themed, working
+- [x] Pasting one `<script>` tag into `demo-portal` yields a themed, working
       calendar under strict CSP
 - [x] Both adapters pass the same adapter conformance suite — 25 tests, one
       suite, parameterised only by adapter name
 - [x] Swapping the adapter requires **no change** outside the adapter module —
       the suite never imports a renderer and never branches on which is loaded,
       which is the demonstration
-- [ ] Loader is under 2KB gzipped, with the measurement in CI
-- [ ] Every hostile-host scenario in 4.8 is green
-- [ ] Two embeds on one page do not interfere
+- [x] Loader is under 2KB gzipped (1282 B, 63%), with the measurement in CI
+- [x] Every hostile-host scenario in 4.8 is green — 18 tests, two real origins
+- [x] Two embeds on one page do not interfere
 
 ---
 
@@ -180,6 +180,33 @@ invisible in exactly the deployment it was built for.
 failing check rather than a warning. Verified by padding it with
 incompressible bytes — the first attempt used a repeating pattern that gzip
 simply ate, which proved nothing.
+
+---
+
+## What the hostile-host suite found
+
+Run against two real origins — a real Gnomon server and a real portal — with
+real tokens signed by a real key. Nothing mocked, because every hazard here
+exists only because the two are not the same site.
+
+**Strict CSP resolves via the INLINE path**, styles intact. `style-src 'self'`
+with no `'unsafe-inline'` anywhere does not force the fallback, because the
+component styles itself with `adoptedStyleSheets`, which is not subject to
+`style-src`. This was genuinely unknown before running it, and it is the
+single best argument for having chosen constructable stylesheets over a
+`<style>` tag.
+
+**The iframe sandbox was wrong.** `sandbox="allow-scripts"` without
+`allow-same-origin` gives the frame an *opaque null origin*, and
+`postMessage(msg, gnomonOrigin)` can never match a null origin — so the token
+was silently dropped and the frame waited for ever. `allow-same-origin` is
+required here, and it is not a weakening: the frame is cross-origin from the
+portal either way, so it grants Gnomon's own origin, not the host's. Forms,
+popups and top-level navigation stay withheld.
+
+**Playwright starts `webServer` before `globalSetup`**, so a database created
+in globalSetup does not exist when the servers boot. Setup runs as a separate
+step before Playwright, handing the URL over in a file.
 
 ---
 

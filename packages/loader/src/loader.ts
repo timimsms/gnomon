@@ -167,9 +167,14 @@ function mountIframe(container: HTMLElement, config: Config): void {
   frame.style.width = '100%';
   frame.style.height = config.height;
   frame.title = 'Calendar';
-  // No allow-same-origin: the frame is a different origin anyway, and
-  // withholding it means a compromised frame cannot reach our storage.
-  frame.setAttribute('sandbox', 'allow-scripts');
+  // allow-same-origin is REQUIRED, not a relaxation. Without it the frame
+  // gets an opaque null origin, and `postMessage(msg, gnomonOrigin)` can
+  // never match a null origin -- the token is silently dropped and the frame
+  // waits for ever. It is also not a weakening here: the frame is
+  // cross-origin from the host either way, so "same origin" means Gnomon's
+  // own origin, not the portal's. The sandbox still withholds forms,
+  // popups, top-level navigation and plugins.
+  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
   frame.setAttribute('loading', 'lazy');
 
   const origin = new URL(config.api, location.href).origin;

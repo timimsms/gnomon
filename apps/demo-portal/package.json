@@ -1,0 +1,27 @@
+{
+  "name": "@gnomon/demo-portal",
+  "version": "0.0.0",
+  "description": "Reference host integration, and the hostile-host test target.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx scripts/setup-e2e.ts && playwright test",
+    "setup:e2e": "tsx scripts/setup-e2e.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.2",
+    "jose": "^6.2.8",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.21.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.7.2"
+  }
+}

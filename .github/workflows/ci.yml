@@ -82,6 +82,11 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @gnomon/embed exec playwright install --with-deps chromium
 
+      # The hostile-host suite runs a real Gnomon server and a real portal on
+      # two origins, so it needs its own browser install in that package too.
+      - name: Install Playwright Chromium (demo-portal)
+        run: pnpm --filter @gnomon/demo-portal exec playwright install chromium
+
       # Includes scripts/check-licenses.test.mjs, which proves the gate above
       # rejects AGPL/GPL and fails closed on unknown licences. A gate never
       # observed to reject anything is not a gate.
