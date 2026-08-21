@@ -72,8 +72,8 @@ Phase specifications, with exit criteria, live in
 | 1 | Core domain, recurrence expansion, conformance corpus | ✅ done |
 | 2 | Tenancy, RLS, token auth | ✅ done |
 | 3 | Read API | ✅ done |
-| 4 | Embed surface, renderer adapters | next |
-| 5 | ICS feed out | |
+| 4 | Embed surface, renderer adapters | ✅ done |
+| 5 | ICS feed out | next |
 | 6 | Write path (non-recurring events only) | |
 | 7 | ICS in, accessibility, docs | |
 
