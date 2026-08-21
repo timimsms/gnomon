@@ -1,6 +1,6 @@
 # Phase 4 — Embed surface
 
-**Status:** 🚧 In progress — adapter seam, both implementations, and the Lit component done
+**Status:** 🚧 In progress — adapter seam, component, loader and iframe fallback done; 4.8 hostile-host matrix remains
 **Depends on:** Phase 3
 **Blocks:** Phase 7 (accessibility, docs)
 **Decisions in play:** L3 (renderer behind adapter), ADR-0003
@@ -153,6 +153,33 @@ Against `apps/demo-portal`. Must include, as distinct scenarios:
 pnpm --filter @gnomon/embed test
 pnpm --filter demo-portal test:e2e
 ```
+
+---
+
+## Three findings from wiring it up end to end
+
+**Renderer CSS never reached the shadow root.** A stylesheet in
+`document.head` does not apply inside a shadow root, so `@event-calendar` --
+which ships a CSS file and expects the document to include it — rendered
+correct markup, correct text, and no layout at all. Every text-based
+assertion passed while the grid was visibly broken. FullCalendar injects into
+`getRootNode()` and needed nothing, which makes this seam finding #5: the two
+renderers differ in shadow-DOM CSS handling, and the adapter absorbs it. The
+conformance suite now asserts computed layout, not just text.
+
+**The API had no CORS headers.** Gnomon is embedded cross-origin by
+definition, and without CORS the product is unusable from a browser — while
+failing in a way that looks like nothing: the loader and bundle load fine,
+because classic script loading is not CORS-gated, and only the first `fetch`
+dies with an opaque network error. Every prior test called the API
+same-origin, so nothing caught it. `ETag` must also be in
+`Access-Control-Expose-Headers`, or all of phase 3.3's conditional-GET work is
+invisible in exactly the deployment it was built for.
+
+**The loader is 1.28 KB gzipped**, 62% of its 2 KB budget, enforced by a
+failing check rather than a warning. Verified by padding it with
+incompressible bytes — the first attempt used a repeating pattern that gzip
+simply ate, which proved nothing.
 
 ---
 
