@@ -170,6 +170,14 @@ export const events = pgTable(
     startDate: date('start_date'),
     endDate: date('end_date'),
 
+    /**
+     * Incremented on every update, for If-Match optimistic concurrency
+     * (phase 6.4). Not `updated_at`: now() inside a transaction is the
+     * transaction START time, so two concurrent writers can share one
+     * timestamp and each believe they hold the current version.
+     */
+    version: integer('version').notNull().default(1),
+
     /** RFC 5545 RRULE value, without the "RRULE:" prefix. */
     recurrence: text('recurrence'),
     exceptionDates: text('exception_dates').array(),
