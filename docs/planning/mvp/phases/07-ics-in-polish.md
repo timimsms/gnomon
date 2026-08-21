@@ -1,6 +1,6 @@
 # Phase 7 — ICS ingest and polish
 
-**Status:** ⬜
+**Status:** ⬜ Next — everything before it is complete
 **Depends on:** all previous phases
 **Decisions in play:** L8 (`pg-boss`, no broker)
 **Must close:** **O6** (governance model)
@@ -17,6 +17,57 @@ tagged.
 Three loosely-related workstreams sharing a phase. They can proceed in
 parallel; the accessibility pass is the one that most often gets cut, so it is
 listed first.
+
+---
+
+## Where to start
+
+Suggested order, on the reasoning that the riskiest item should not be last
+and the two blocked items should be unblocked early:
+
+1. **7.4 — resolve O6 (governance).** The only open decision left, and it is
+   cheap. Tagging v0.1.0 is exactly what invites the outside contributors it
+   governs, so deciding it after the first outside PR is deciding it under
+   pressure.
+2. **7.2 — ICS ingest, SSRF first.** The highest-severity item remaining in
+   the whole plan. Write the address validation and its tests *before* the
+   fetching and reconciliation, because it is much harder to retrofit a
+   security control around code that already works without it.
+3. **7.1 — accessibility.** Most likely to be cut under time pressure and
+   least likely to be added afterwards.
+4. **7.3 / 7.5 — docs and release.** Last, because they describe the rest.
+
+### Two items are blocked on things code cannot do
+
+Both are exit criteria and neither can be closed by writing more:
+
+- **The three-client feed check** (Phase 5). Google, Apple and Outlook
+  disagree in practice and none of the disagreements surface in a unit test.
+  `pnpm --filter @gnomon/server db:bootstrap` prints a `webcal://` URL.
+  **Google fetches server-side**, so it needs a publicly reachable host — a
+  tunnel or a deployed instance, not `localhost`.
+- **`docker compose up` in under two minutes on a cold machine** (7.5).
+  Docker is not installed on the current development machine. Everything else
+  now runs against any Postgres ([ADR-0010](../../../decisions/0010-test-database-provisioning.md)),
+  so this is the last thing that genuinely needs Docker.
+
+### What the phase inherits
+
+Worth knowing before starting, because each shortens a work item:
+
+- **`pg-boss` has not been introduced yet.** L8 assumes it for jobs, and 7.2's
+  polling is the first thing that needs a scheduler. It is a new dependency
+  and therefore a licence-gate event.
+- **The ICS parser already exists** and round-trips the phase 1 corpus
+  ([ADR-0008](../../../decisions/0008-ics-parsing-is-a-node-only-subpath.md)).
+  7.2 is fetching, scheduling and reconciliation — not parsing.
+- **`ics_sources` is already in the schema** with `etag`, `last_modified`,
+  `last_error` and `consecutive_failures` columns, under RLS.
+- **Reconciliation matches on `uid`**, which is why phase 1 kept `uid`
+  distinct from `id`.
+- **Ingested events must be read-only to the phase 6 write path**, or the next
+  poll silently overwrites a user's edit. That refusal wants the same specific
+  treatment recurrence editing got, for the same reason.
 
 ---
 

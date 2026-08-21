@@ -1,8 +1,34 @@
 # Embeddable Portal Calendar — MVP Gameplan
 
-**Working name:** TBD (see Open Decisions)
-**Status:** Pre-build. Scoping locked pending ledger confirmation.
-**Date:** 2026-08-09
+**Working name:** Gnomon (O1, closed)
+**Status:** ⚠️ **Historical.** This is the original scoping document, kept as
+the record of why the project is shaped the way it is. It has NOT been edited
+to match what was built.
+
+---
+
+## Read this first
+
+For current state, go to:
+
+- [`phases/README.md`](phases/README.md) — phase specifications and exit
+  criteria, kept up to date
+- [`../../decisions/README.md`](../../decisions/README.md) — the live decision
+  ledger, including every ADR
+
+**Four things below are now known to be wrong**, and are worth knowing about
+before trusting anything else on this page:
+
+| Claim here | What is actually true |
+|---|---|
+| L6: "Server runs native [Temporal]" on Node 26+ | Node 26.3.0 exposes no `Temporal` at all, with or without `--harmony-temporal`. Both server and client use `temporal-polyfill` ([ADR-0006](../../decisions/0006-temporal-acquisition.md)) |
+| L10: "ICS feed out is a **Phase 4** deliverable" | It landed in Phase 5; the phase numbering here drifted from the ledger's |
+| O1 (name) and O3 (design partner) listed as open | Both closed before Phase 0 — Gnomon, and no design partner (L11) |
+| Testing: "API contract — Vitest + testcontainers" | Testcontainers requires a Docker daemon, which is the dependency it was chosen to avoid depending on. Replaced by a URL-based harness ([ADR-0010](../../decisions/0010-test-database-provisioning.md)) |
+
+The rest — the thesis, the market gap, the ordering argument, the non-goals
+and the risk register — has held up, including the prediction that Phases 1
+and 4 would be the ones that overran.
 
 ---
 
