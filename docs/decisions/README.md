@@ -22,6 +22,7 @@ Last reviewed: after Phase 6
 | [0008](0008-ics-parsing-is-a-node-only-subpath.md) | ICS interop lives in a Node-only subpath | L9 |
 | [0009](0009-eddsa-with-registered-public-keys.md) | EdDSA tokens verified against registered public keys | O2 |
 | [0010](0010-test-database-provisioning.md) | Tests take a Postgres URL, not a Docker daemon | Phase 2.6 |
+| [0011](0011-stewardship-governance.md) | Stewardship governance, revisited at scale | O6 |
 
 Each records what was **rejected** and why, not only what was chosen — that is
 the part which is expensive to reconstruct later.
@@ -48,11 +49,7 @@ the part which is expensive to reconstruct later.
 
 ## Open
 
-One remains.
-
-| # | Question | Blocks | Notes |
-|---|---|---|---|
-| O6 | Governance model (BDFL vs. contributor ladder) | Phase 7 | Only matters when outside contributors arrive — which tagging v0.1.0 is precisely what invites. Resolve before the tag, not after the first outside PR. |
+**None.** Every question the ledger opened has been answered.
 
 ### Closed
 
@@ -61,4 +58,5 @@ One remains.
 - **O2 (JWT signing)** — resolved: EdDSA (Ed25519) verified against public keys registered at onboarding; JWKS deferred as an additive change. Only one algorithm is accepted, which removes algorithm confusion by construction. See [ADR-0009](0009-eddsa-with-registered-public-keys.md).
 - **O4 (materialise vs. expand on read)** — resolved: expand on read, bounded by both a window cap and an occurrence-count cap. See [ADR-0007](0007-expand-on-read.md).
 - **O5 (all-day semantics)** — resolved: floating dates, as a discriminated union with exclusive `endDate`. Zone-anchored indexing is derived, not stored as truth. See [ADR-0005](0005-all-day-events-are-floating-dates.md).
+- **O6 (governance)** — resolved: stewardship, with technical decisions gated by ADR and an explicit trigger to revisit at roughly three regular contributors. See [ADR-0011](0011-stewardship-governance.md) and [GOVERNANCE.md](../../GOVERNANCE.md).
 - **O7 (server Temporal)** — resolved: `temporal-polyfill` on both server and client, behind a single re-export module. Amends L6, whose "Node 26+ is native" premise was verified false. See [ADR-0006](0006-temporal-acquisition.md).
