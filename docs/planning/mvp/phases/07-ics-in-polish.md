@@ -3,7 +3,7 @@
 **Status:** ⬜ Next — everything before it is complete
 **Depends on:** all previous phases
 **Decisions in play:** L8 (`pg-boss`, no broker)
-**Must close:** **O6** (governance model)
+**Must close:** ~~O6~~ — closed, see [ADR-0011](../../../decisions/0011-stewardship-governance.md)
 
 ---
 
@@ -25,14 +25,14 @@ listed first.
 Suggested order, on the reasoning that the riskiest item should not be last
 and the two blocked items should be unblocked early:
 
-1. **7.4 — resolve O6 (governance).** The only open decision left, and it is
-   cheap. Tagging v0.1.0 is exactly what invites the outside contributors it
-   governs, so deciding it after the first outside PR is deciding it under
-   pressure.
-2. **7.2 — ICS ingest, SSRF first.** The highest-severity item remaining in
-   the whole plan. Write the address validation and its tests *before* the
-   fetching and reconciliation, because it is much harder to retrofit a
-   security control around code that already works without it.
+1. ~~**7.4 — resolve O6 (governance).**~~ ✅ Done —
+   [ADR-0011](../../../decisions/0011-stewardship-governance.md) and
+   [GOVERNANCE.md](../../../../GOVERNANCE.md). The ledger now has no open
+   decisions.
+2. **7.2 — ICS ingest, SSRF first.** ✅ The SSRF half is done: address
+   validation, a guarded DNS lookup that closes the rebinding window, per-hop
+   redirect re-validation, size and redirect caps. 47 tests. Remaining is the
+   ingest itself — source registration, `pg-boss` polling and reconciliation.
 3. **7.1 — accessibility.** Most likely to be cut under time pressure and
    least likely to be added afterwards.
 4. **7.3 / 7.5 — docs and release.** Last, because they describe the rest.
@@ -146,13 +146,14 @@ step and the tag should wait.
 - [ ] Default theme meets WCAG AA contrast
 - [ ] An external ICS feed polls, reconciles adds/changes/removes by `UID`, and
       backs off correctly on failure
-- [ ] SSRF protections are tested against DNS-rebinding-shaped inputs, not only
-      literal private IPs
+- [x] SSRF protections are tested against DNS-rebinding-shaped inputs, not only
+      literal private IPs — the guard runs as the connection's own DNS lookup,
+      so the address validated is the address connected to
 - [ ] A new integrator reaches a working embedded calendar from documentation
       alone, without reading source
 - [ ] `docker compose up` → working seeded calendar in under two minutes on a
       cold machine
-- [ ] O6 resolved and recorded
+- [x] O6 resolved and recorded
 - [ ] `v0.1.0` tagged and published
 
 ---
