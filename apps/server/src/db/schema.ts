@@ -178,6 +178,22 @@ export const events = pgTable(
      */
     version: integer('version').notNull().default(1),
 
+    /**
+     * The ICS source that produced this event, or NULL if it was created
+     * directly (phase 7.2). Scopes reconciliation to a source's own events,
+     * and marks the event read-only to the write path -- an edit to a synced
+     * event is reverted by the next poll, so it is refused rather than
+     * accepted and quietly lost.
+     */
+    icsSourceId: uuid('ics_source_id'),
+
+    /**
+     * Digest of the ingested content, so a poll can decide whether anything
+     * changed with one comparison. NULL for hand-created events, which are
+     * never reconciled against a feed.
+     */
+    fingerprint: text('fingerprint'),
+
     /** RFC 5545 RRULE value, without the "RRULE:" prefix. */
     recurrence: text('recurrence'),
     exceptionDates: text('exception_dates').array(),
@@ -351,6 +367,8 @@ export const icsSources = pgTable(
   },
   (table) => [
     index('ics_sources_tenant_calendar_idx').on(table.tenantId, table.calendarId),
+    // Target of events' composite foreign key; see migration 0004.
+    unique('ics_sources_id_tenant_key').on(table.id, table.tenantId),
     foreignKey({
       columns: [table.calendarId, table.tenantId],
       foreignColumns: [calendars.id, calendars.tenantId],

@@ -31,8 +31,12 @@ and the two blocked items should be unblocked early:
    decisions.
 2. **7.2 — ICS ingest, SSRF first.** ✅ The SSRF half is done: address
    validation, a guarded DNS lookup that closes the rebinding window, per-hop
-   redirect re-validation, size and redirect caps. 47 tests. Remaining is the
-   ingest itself — source registration, `pg-boss` polling and reconciliation.
+   redirect re-validation, size and redirect caps. 47 tests.
+
+   The ingest itself is now done too: conditional fetch, UID reconciliation,
+   backoff, and ingested events made read-only to the write path. **The
+   scheduler is not wired** — `pg-boss` is not yet a dependency, and
+   `pollSource` is called directly. That is the remaining piece of 7.2.
 3. **7.1 — accessibility.** Most likely to be cut under time pressure and
    least likely to be added afterwards.
 4. **7.3 / 7.5 — docs and release.** Last, because they describe the rest.
@@ -144,8 +148,8 @@ step and the tag should wait.
 
 - [ ] Month view is fully keyboard-navigable; view changes are announced
 - [ ] Default theme meets WCAG AA contrast
-- [ ] An external ICS feed polls, reconciles adds/changes/removes by `UID`, and
-      backs off correctly on failure
+- [x] An external ICS feed polls, reconciles adds/changes/removes by `UID`, and
+      backs off correctly on failure — scheduling still to be wired to `pg-boss`
 - [x] SSRF protections are tested against DNS-rebinding-shaped inputs, not only
       literal private IPs — the guard runs as the connection's own DNS lookup,
       so the address validated is the address connected to

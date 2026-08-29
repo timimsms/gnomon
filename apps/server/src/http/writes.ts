@@ -49,6 +49,7 @@ const CreateEventSchema = z.object({
 const UpdateEventSchema = CreateEventSchema.partial().omit({ uid: true });
 
 const EVENT_COLUMNS = `id, tenant_id AS "tenantId", calendar_id AS "calendarId", uid, title,
+  ics_source_id AS "icsSourceId",
   description, location, status, timing_kind AS "timingKind",
   start_local AS "startLocal", end_local AS "endLocal", time_zone AS "timeZone",
   start_date AS "startDate", end_date AS "endDate", recurrence,
@@ -139,6 +140,11 @@ export function registerWriteRoutes<E extends Env & { Variables: { token: Verifi
           return { kind: 'forbidden' as const };
         }
         if (current.recurrence) return { kind: 'recurring' as const };
+        // An edit to a synced event is reverted by the next poll, so it is
+        // refused rather than accepted and quietly lost (phase 7.2).
+        if ((current as { icsSourceId?: string | null }).icsSourceId) {
+          return { kind: 'ingested' as const };
+        }
         if (ifMatch && !matchesVersion(ifMatch, current.version)) {
           return { kind: 'conflict' as const, version: current.version };
         }
@@ -188,8 +194,15 @@ export function registerWriteRoutes<E extends Env & { Variables: { token: Verifi
             409,
             { ETag: versionTag(result.version) },
           );
-        default:
+        case 'ingested':
+          return ingestedReadOnly(c);
+        case 'ok':
+          // Explicit rather than `default:` so that adding another refusal
+          // reason becomes a compile error here, instead of falling through
+          // to a success response that has no event to return.
           return c.json(present(result.stored), 200, { ETag: versionTag(result.stored.version) });
+        default:
+          return c.json({ error: 'internal_error' }, 500);
       }
     } catch (error) {
       return writeError(c, error);
@@ -213,6 +226,9 @@ export function registerWriteRoutes<E extends Env & { Variables: { token: Verifi
           return { kind: 'forbidden' as const };
         }
         if (current.recurrence) return { kind: 'recurring' as const };
+        if ((current as { icsSourceId?: string | null }).icsSourceId) {
+          return { kind: 'ingested' as const };
+        }
         if (ifMatch && !matchesVersion(ifMatch, current.version)) {
           return { kind: 'conflict' as const, version: current.version };
         }
@@ -231,10 +247,14 @@ export function registerWriteRoutes<E extends Env & { Variables: { token: Verifi
           return c.json({ error: 'forbidden' }, 403);
         case 'recurring':
           return recurrenceUnsupported(c);
+        case 'ingested':
+          return ingestedReadOnly(c);
         case 'conflict':
           return c.json({ error: 'version_conflict' }, 409, { ETag: versionTag(result.version) });
-        default:
+        case 'ok':
           return c.body(null, 204);
+        default:
+          return c.json({ error: 'internal_error' }, 500);
       }
     } catch (error) {
       return writeError(c, error);
@@ -281,6 +301,26 @@ function recurrenceUnsupported(c: Context): Response {
       message:
         'Recurring events are read-only in this version. Creating or modifying a recurrence ' +
         'rule is not supported; see the documented limitations (L4).',
+    },
+    422,
+  );
+}
+
+/**
+ * Refuses a write to an event that came from an ICS feed.
+ *
+ * Specific for the same reason recurrence editing is: the next poll would
+ * revert the change, so accepting it would be a silent lie. Better to say
+ * why, and say where the event actually comes from.
+ */
+function ingestedReadOnly(c: Context): Response {
+  return c.json(
+    {
+      error: 'event_is_ingested',
+      message:
+        'This event is synced from an ICS source and is read-only here. Edit it at the ' +
+        'source, or detach the source first; a change made here would be reverted by the ' +
+        'next poll.',
     },
     422,
   );
