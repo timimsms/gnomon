@@ -81,7 +81,15 @@ beforeAll(async () => {
   revoked = await createFeed(TENANT_A, calA, 'retired', true);
 
   db = createDatabase(appUrl(adminUrl as string, harness.databaseName));
-  app = createApp({ db, registry: new InMemoryKeyRegistry() });
+  // Pinned inside the window the March/July fixtures live in. Without this
+  // the suite passes when written and fails months later with no code change,
+  // because the feed window rolls forward and leaves the fixtures behind --
+  // which is exactly what happened.
+  app = createApp({
+    db,
+    registry: new InMemoryKeyRegistry(),
+    feedClock: () => new Date('2026-04-01T00:00:00Z'),
+  });
 }, 60_000);
 
 afterAll(async () => {
@@ -380,5 +388,57 @@ describe.skipIf(!available)('the feed parses back cleanly', () => {
     } finally {
       await harness.owner.query('DELETE FROM events WHERE uid = $1', ['long@a']);
     }
+  });
+});
+
+describe.skipIf(!available)('the rolling window', () => {
+  /**
+   * Now testable at all, because the clock is an input.
+   *
+   * Subscribers notice where a feed ends, so the bounds are asserted rather
+   * than left as an implementation detail — and these are the assertions that
+   * would have caught the rot: they fail if the window moves, instead of
+   * failing silently months later because a fixture fell out of it.
+   */
+  const feedAt = (iso: string) =>
+    createApp({
+      db,
+      registry: new InMemoryKeyRegistry(),
+      feedClock: () => new Date(iso),
+    }).request(`/feeds/${feedA}.ics`);
+
+  it('includes an event inside the window', async () => {
+    resetFeedRateLimits();
+    const body = await (await feedAt('2026-04-01T00:00:00Z')).text();
+    expect(body).toContain('Boiler inspection');
+  });
+
+  it('excludes a non-recurring event that has fallen off the back', async () => {
+    // Tested with the all-day fixture rather than the weekly one, and the
+    // reason matters: a COUNT-limited rule is given an UNBOUNDED search span
+    // (ADR-0007 declines to expand at write time to tighten it), so a
+    // recurring event never falls out of the pre-filter no matter how long
+    // ago its last occurrence was. That is the conservative-superset trade
+    // working as designed, not a bug -- but it does mean the back edge can
+    // only be observed on a bounded event.
+    resetFeedRateLimits();
+    const body = await (await feedAt('2028-06-01T00:00:00Z')).text();
+    expect(body).not.toContain('Independence Day');
+  });
+
+  it('keeps a COUNT-limited recurring event indefinitely, by design', async () => {
+    // Pinning the consequence of the above so it is a decision on record
+    // rather than a surprise to whoever next reads a feed full of expired
+    // series.
+    resetFeedRateLimits();
+    const body = await (await feedAt('2028-06-01T00:00:00Z')).text();
+    expect(body).toContain('Boiler inspection');
+  });
+
+  it('excludes an event still beyond the front of the window', async () => {
+    // Eighteen months before the July fixture.
+    resetFeedRateLimits();
+    const body = await (await feedAt('2024-01-01T00:00:00Z')).text();
+    expect(body).not.toContain('Independence Day');
   });
 });
