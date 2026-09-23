@@ -33,8 +33,13 @@ and the two blocked items should be unblocked early:
    validation, a guarded DNS lookup that closes the rebinding window, per-hop
    redirect re-validation, size and redirect caps. 47 tests. Remaining is the
    ingest itself — source registration, `pg-boss` polling and reconciliation.
-3. **7.1 — accessibility.** Most likely to be cut under time pressure and
-   least likely to be added afterwards.
+3. **7.1 — accessibility.** ✅ The component's half is done: labelled region,
+   period heading, live-region announcements on view and date change,
+   PageUp/PageDown navigation, a focus ring that survives a host reset and
+   forced-colors mode, reduced-motion, and WCAG AA asserted on the rendered
+   tokens.
+
+   **The renderer's half is a decision, not a task** — see below.
 4. **7.3 / 7.5 — docs and release.** Last, because they describe the rest.
 
 ### Two items are blocked on things code cannot do
@@ -90,6 +95,26 @@ The web component must be usable with a keyboard and a screen reader:
 Much of this is inherited from the renderer and may be outside our control. Where
 the renderer's semantics are inadequate, the finding goes in an ADR — it is
 evidence about adapter choice, which is precisely what ADR-0003 anticipated.
+
+### And it did. Measured from the computed ARIA tree:
+
+| | `@event-calendar` (L3 default) | FullCalendar Standard |
+|---|---|---|
+| Container role | `table` | `grid` |
+| Rows | **1** — the header only | 9, in proper rowgroups |
+| Day cells | 35, **all orphaned** (no `role="row"` ancestor) | 42, correctly nested |
+| Cell accessible name | `"1"` | `"March 1, 2026"` |
+
+`role="cell"` outside a `role="row"` is invalid ARIA. The practical effect is
+that our default renderer's month grid is **not navigable by screen reader**:
+a user hears 35 bare numbers with no row, column or date context.
+
+**It is not fixable from the adapter.** The renderer re-renders its own DOM on
+every navigation and event change, so any post-processing would be undone
+moments later.
+
+`test/renderer-a11y.spec.ts` asserts the measured behaviour of both, so if
+`@event-calendar` improves, a test fails and that failure is the news.
 
 ### 7.2 ICS source registration and polling
 

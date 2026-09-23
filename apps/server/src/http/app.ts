@@ -39,6 +39,8 @@ export interface AppOptions {
   db: Database;
   registry: KeyRegistry;
   verify?: VerifyOptions;
+  /** Pins the ICS feed's rolling window. Tests only; see FeedRouteOptions. */
+  feedClock?: () => Date;
 }
 
 type Env = { Variables: AuthVariables };
@@ -75,7 +77,7 @@ export function createApp(options: AppOptions) {
 
   // Also before the auth middleware: a feed's only credential is the opaque
   // token in its URL, because a calendar client cannot present a JWT.
-  registerFeedRoutes(app, options.db);
+  registerFeedRoutes(app, options.db, options.feedClock ? { now: options.feedClock } : {});
 
   app.use('/calendars', requireToken(options.registry, options.verify ?? {}));
   app.use('/calendars/*', requireToken(options.registry, options.verify ?? {}));

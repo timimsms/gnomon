@@ -41,6 +41,7 @@ export class GnomonCalendar extends LitElement {
     _occurrences: { state: true },
     _status: { state: true },
     _message: { state: true },
+    _announcement: { state: true },
   };
 
   /** Base URL of the Gnomon API. */
@@ -60,6 +61,12 @@ export class GnomonCalendar extends LitElement {
   declare private _occurrences: EventOccurrence[];
   declare private _status: 'idle' | 'loading' | 'ready' | 'error';
   declare private _message: string;
+  /**
+   * Text for the live region. A view or date change is silent to a screen
+   * reader otherwise, and a silent change is indistinguishable from a broken
+   * one -- the user presses Next and has no way to know anything happened.
+   */
+  declare private _announcement: string;
 
   #adapter: RendererAdapter | null = null;
   #client: CalendarClient | null = null;
@@ -80,6 +87,7 @@ export class GnomonCalendar extends LitElement {
     this._occurrences = [];
     this._status = 'idle';
     this._message = '';
+    this._announcement = '';
   }
 
   /**
@@ -125,6 +133,13 @@ export class GnomonCalendar extends LitElement {
     if (changed.has('view') && this.#adapter) this.#adapter.setView(this.view);
     if (changed.has('date') && this.#adapter) this.#adapter.setDate(this.date);
 
+    // Announced only on a real change, not on every render: a live region
+    // that repeats itself is noise, and a screen reader user will turn the
+    // whole thing off.
+    if (changed.has('view') || changed.has('date')) {
+      this._announcement = `${this.#periodLabel()}, ${this.view} view`;
+    }
+
     // Any of these changes the window or the identity of what we are asking
     // for, so the data has to be refetched rather than re-filtered.
     const refetchTriggers = ['api', 'token', 'tokenEndpoint', 'calendars', 'date', 'tz'] as const;
@@ -139,11 +154,23 @@ export class GnomonCalendar extends LitElement {
     if (!host) return;
 
     this.#adapter = this.#factory.create();
-    this.#adapter.on('rangeChange', ({ from }) => {
-      // The renderer shows a padded range -- a month view includes trailing
-      // days of the previous month. Following it directly would refetch on
-      // every render, so only a genuine month change moves `date`.
-      const next = from.slice(0, 10);
+    this.#adapter.on('rangeChange', ({ from, to }) => {
+      // The renderer reports the PADDED range: a month grid starts on the
+      // Sunday before the 1st and ends after the last, so `from` for April is
+      // usually in late March.
+      //
+      // Taking `from` directly meant navigating to April set `date` back to
+      // 2026-03-29 -- the handler undid the navigation that triggered it. The
+      // data still loaded, because the fetch window covers the padding, so
+      // nothing looked wrong until the period heading started displaying the
+      // month and it visibly refused to change.
+      //
+      // The midpoint is inside the displayed month for any grid that pads
+      // symmetrically-ish, which both renderers do.
+      const midpoint = new Date((Date.parse(from) + Date.parse(to)) / 2);
+      if (Number.isNaN(midpoint.getTime())) return;
+
+      const next = midpoint.toISOString().slice(0, 10);
       if (next.slice(0, 7) !== this.date.slice(0, 7)) {
         this.date = next;
       }
@@ -173,6 +200,22 @@ export class GnomonCalendar extends LitElement {
   #teardownAdapter(): void {
     this.#adapter?.destroy();
     this.#adapter = null;
+  }
+
+  /**
+   * The visible period, as a person would say it.
+   *
+   * Via `Intl` rather than a hand-written month table, so it follows the
+   * `locale` attribute -- an announcement in the wrong language is worse than
+   * none, because it sounds like a bug in the host's page.
+   */
+  #periodLabel(): string {
+    const date = new Date(`${this.date || todayIso(this.#timeZone())}T00:00:00Z`);
+    return new Intl.DateTimeFormat(this.locale || undefined, {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date);
   }
 
   #timeZone(): string {
@@ -246,6 +289,35 @@ export class GnomonCalendar extends LitElement {
     );
   }
 
+  /**
+   * PageUp/PageDown move between months, which is the convention every
+   * desktop calendar uses and therefore what a keyboard user will try first.
+   *
+   * Ignored when the event came from a control that has its own meaning for
+   * the key, so the handler cannot steal input from a field the host placed
+   * inside our light DOM.
+   */
+  #onKeyDown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+
+    const target = event.composedPath()[0];
+    if (target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+
+    if (event.key === 'PageUp') {
+      this.#move(-1);
+    } else if (event.key === 'PageDown') {
+      this.#move(1);
+    } else if (event.key === 'Home') {
+      this.date = todayIso(this.#timeZone());
+    } else {
+      return;
+    }
+
+    // Only once we have handled it -- swallowing keys we ignore would break
+    // the host's own shortcuts.
+    event.preventDefault();
+  }
+
   #move(months: number): void {
     const anchor = new Date(`${this.date}T00:00:00Z`);
     this.date = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + months, 1))
@@ -254,8 +326,22 @@ export class GnomonCalendar extends LitElement {
   }
 
   override render() {
+    const period = this.#periodLabel();
+
     return html`
-      <div class="gnomon-root" part="root">
+      <!--
+        A labelled region, so a screen reader user can find and skip the
+        calendar rather than discovering an unlabelled table mid-page. The
+        keydown handler lives here rather than on window: a component that
+        binds global keys fights whatever else the host page has bound.
+      -->
+      <div
+        class="gnomon-root"
+        part="root"
+        role="region"
+        aria-label=${`Calendar, ${period}`}
+        @keydown=${(event: KeyboardEvent) => this.#onKeyDown(event)}
+      >
         <div class="gnomon-chrome" part="chrome">
           <div class="gnomon-nav">
             <button part="button" aria-label="Previous month" @click=${() => this.#move(-1)}>‹</button>
@@ -264,6 +350,8 @@ export class GnomonCalendar extends LitElement {
             </button>
             <button part="button" aria-label="Next month" @click=${() => this.#move(1)}>›</button>
           </div>
+          <h2 class="gnomon-period" part="period">${period}</h2>
+
           <div class="gnomon-views" role="group" aria-label="View">
             ${(['month', 'agenda'] as const).map(
               (name) => html`
@@ -291,8 +379,22 @@ export class GnomonCalendar extends LitElement {
         <div class="gnomon-surface" part="surface"></div>
 
         ${this._status === 'loading'
-          ? html`<div class="gnomon-loading" part="loading" aria-live="polite">Loading…</div>`
+          ? html`<div class="gnomon-loading" part="loading">Loading…</div>`
           : nothing}
+
+        <!--
+          Always present, never conditionally rendered. A live region added to
+          the DOM at the same moment its text appears is frequently missed by
+          screen readers, because there was nothing to observe when the change
+          happened. It stays mounted and only its text changes.
+
+          Visually hidden with clip rather than display:none or
+          visibility:hidden, both of which remove it from the accessibility
+          tree and defeat the purpose entirely.
+        -->
+        <div class="gnomon-sr-only" role="status" aria-live="polite" aria-atomic="true">
+          ${this._status === 'loading' ? 'Loading calendar…' : this._announcement}
+        </div>
       </div>
     `;
   }
@@ -365,6 +467,35 @@ export class GnomonCalendar extends LitElement {
       gap: var(--gnomon-gap);
     }
 
+    .gnomon-period {
+      margin: 0;
+      align-self: center;
+      font-size: 1em;
+      font-weight: 600;
+      /* Restated for the same reason the root block restates them: a host
+         rule on h2 reaches here by inheritance of the computed value. */
+      font-family: var(--gnomon-font-family);
+      color: var(--gnomon-text-colour);
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    /* Clip rather than display:none or visibility:hidden -- both of those
+       remove the element from the accessibility tree, which would make a
+       live region that announces nothing. */
+    .gnomon-sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
     button {
       font: inherit;
       color: inherit;
@@ -390,6 +521,15 @@ export class GnomonCalendar extends LitElement {
     button:focus-visible {
       outline: 2px solid var(--gnomon-focus-colour);
       outline-offset: 2px;
+    }
+
+    /* In Windows high-contrast mode the authored colours are discarded, and
+       an outline defined only as a custom property disappears with them.
+       Highlight is a system colour that survives. */
+    @media (forced-colors: active) {
+      button:focus-visible {
+        outline: 3px solid Highlight;
+      }
     }
 
     .gnomon-surface {

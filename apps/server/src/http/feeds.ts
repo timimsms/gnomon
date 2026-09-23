@@ -73,7 +73,28 @@ export function resetFeedRateLimits(): void {
   buckets.clear();
 }
 
-export function registerFeedRoutes<E extends Env>(app: Hono<E>, db: Database): void {
+export interface FeedRouteOptions {
+  /**
+   * Injectable clock.
+   *
+   * The feed window is a ROLLING one, relative to now, so any test with
+   * hard-coded fixture dates silently rots as real time advances past them.
+   * That is not hypothetical: two feed tests passed when written and began
+   * failing months later, on main, with no code change -- the window had
+   * moved past the March fixtures they seeded.
+   *
+   * Pinning the clock makes the window an input rather than an ambient fact,
+   * which is also the only way to test its boundaries directly.
+   */
+  now?: () => Date;
+}
+
+export function registerFeedRoutes<E extends Env>(
+  app: Hono<E>,
+  db: Database,
+  options: FeedRouteOptions = {},
+): void {
+  const now = options.now ?? (() => new Date());
   app.get('/feeds/:token{.+\\.ics}', async (c) => {
     const raw = c.req.param('token').replace(/\.ics$/, '');
 
@@ -112,7 +133,7 @@ export function registerFeedRoutes<E extends Env>(app: Hono<E>, db: Database): v
         );
         if (!calendar.rows[0]) return null;
 
-        const [from, to] = feedWindow();
+        const [from, to] = feedWindow(now());
         const events = await client.query<EventRow>(
           `SELECT id, tenant_id AS "tenantId", calendar_id AS "calendarId", uid, title,
                   description, location, status, timing_kind AS "timingKind",
@@ -223,8 +244,8 @@ function isFresh(c: Context, etag: string, lastModified: Date | null): boolean {
   );
 }
 
-function feedWindow(): [string, string] {
-  const now = new Date();
+function feedWindow(reference: Date): [string, string] {
+  const now = reference;
   const from = new Date(now);
   from.setUTCMonth(from.getUTCMonth() - PAST_MONTHS);
   const to = new Date(now);

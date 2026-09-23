@@ -302,3 +302,26 @@ test.describe('teardown', () => {
     expect(pageErrors).toEqual([]);
   });
 });
+
+test('the css template contains no stray backticks', async ({ page }) => {
+  // A backtick inside a css`` template terminates the string, and the result
+  // is a syntax error a hundred lines away from the comment that caused it.
+  // This has happened three times while writing this component, each time
+  // from a comment quoting a CSS property in backticks out of habit.
+  //
+  // Asserted at runtime rather than by reading the file: if the template were
+  // broken the module would not load at all, so reaching this point with
+  // styles attached IS the check.
+  await page.goto('/component.html');
+  await page.waitForFunction(() => Boolean(window.gnomonTest));
+
+  const hasStyles = await page.evaluate(() => {
+    const el = document.createElement('gnomon-calendar');
+    document.body.append(el);
+    const attached = (el.shadowRoot?.adoptedStyleSheets.length ?? 0) > 0;
+    el.remove();
+    return attached;
+  });
+
+  expect(hasStyles).toBe(true);
+});
